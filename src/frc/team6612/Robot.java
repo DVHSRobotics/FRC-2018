@@ -41,6 +41,16 @@ public class Robot extends IterativeRobot {
     }
 
     @Override
+    public void disabledInit() {
+
+    }
+
+    @Override
+    public void disabledPeriodic() {
+
+    }
+
+    @Override
     public void autonomousInit() {
         //getGameSpecificMessage returns a three char string of either a L or R char in each pos. Ex: "LRR"
         //getLocation returns an int from 1 to 3, representing which slot (starting from the left) the robot has been assigned to.
@@ -78,6 +88,11 @@ public class Robot extends IterativeRobot {
 
                 break;
         }
+    }
+
+    @Override
+    public void autonomousPeriodic() {
+
     }
 
     @Override
