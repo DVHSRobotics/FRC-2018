@@ -10,50 +10,82 @@ package frc.team6612;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
-/*
- *
- * getRawButton(4) is top right trigger
- *
- * */
 public class Robot extends IterativeRobot {
-    private DifferentialDrive myRobot;//"tank drive"
+
+    private DifferentialDrive myRobot; //"tank drive"
     private Joystick controller;
-    private boolean arcadeDrive;
-    private boolean compressAir;
-    private boolean sole1;
-    private boolean sole2;
-    private boolean sole3;
+    private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered;
     private Thread reader;
-    private double mSpeed;
+    private double mSpeed, driveSpeed;
     private Spark eMotor;
     private Compressor c;
-    private Solenoid solenoid1;
-    private Solenoid solenoid2;
+    private Solenoid solenoid1, solenoid2;
 
     @Override
     public void robotInit() {
 
+        //Objects Initialization
         myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
         controller = new Joystick(0);
         c = new Compressor(0);
         solenoid1 = new Solenoid(0);
         solenoid2 = new Solenoid (1);
-    }
-
-    @Override
-    public void disabledInit() {
-
-    }
-
-    @Override
-    public void disabledPeriodic() {
+        eMotor = new Spark(2);
 
     }
 
     @Override
     public void autonomousInit() {
+
+        moveToPosition();
+
+    }
+
+    @Override
+    public void teleopInit() {
+
+        startReaderThread();
+
+    }
+
+    @Override
+    public void teleopPeriodic() {
+
+        motorController();
+        driveControl();
+        airCompressor();
+
+    }
+
+    private void startReaderThread() {
+
+        arcadeDrive = controller.getRawButton(4);
+
+        //reader thread prints out arcade drive is active/inactive while enabling/disabling
+        reader = new Thread(() -> {
+            while (!Thread.interrupted()) {
+
+                if (arcadeDrive != controller.getRawButton(4)) {
+                    arcadeDrive = controller.getRawButton(4); //enable/disable
+                    if (arcadeDrive)
+                        System.out.println("Arcade drive is active!");
+                    else
+                        System.out.println("Arcade drive is inactive!");
+
+                }
+
+            }
+        });
+
+        reader.start();
+
+    }
+
+    private void moveToPosition() {
+
         //getGameSpecificMessage returns a three char string of either a L or R char in each pos. Ex: "LRR"
         //getLocation returns an int from 1 to 3, representing which slot (starting from the left) the robot has been assigned to.
+
         String plateColors = DriverStation.getInstance().getGameSpecificMessage();
         int location = DriverStation.getInstance().getLocation();
         switch (location) {
@@ -88,34 +120,10 @@ public class Robot extends IterativeRobot {
 
                 break;
         }
-    }
-
-    @Override
-    public void autonomousPeriodic() {
 
     }
 
-    @Override
-    public void teleopInit() {
-
-        startReaderThread();
-        eMotor = new Spark(2);
-
-    }
-
-    @Override
-    public void teleopPeriodic() {
-
-        //getRawAxis gives values from -1 to 1
-        mSpeed = controller.getRawAxis(6);
-        eMotor.setSpeed(mSpeed);
-
-
-        //if arcadeDrive is true, set drive method to arcade drive; else, tank drive
-        if (arcadeDrive)
-            myRobot.arcadeDrive(-controller.getX(), controller.getRawAxis(3));
-        else
-            myRobot.tankDrive(-1 * controller.getY(), -1 * controller.getX(), true);
+    private void airCompressor() {
 
         compressAir = controller.getRawButton(5);
 
@@ -124,36 +132,31 @@ public class Robot extends IterativeRobot {
         else
             c.setClosedLoopControl(false);
 
-        sole1 = controller.getRawButton(6);
-        sole2 = controller.getRawButton(7);
-        sole3 = controller.getRawButton(8);
+        soleOnePowered = controller.getRawButton(6);
+        soleTwoPowered = controller.getRawButton(7);
 
-        solenoid1.set(sole1 || sole3);
-        solenoid2.set(sole2 || sole3);
+        solenoid1.set(soleOnePowered);
+        solenoid2.set(soleTwoPowered);
+
+    }
+
+    private void driveControl() {
+
+        driveSpeed = controller.getRawAxis(7);
+        //if arcadeDrive is true, set drive method to arcade drive; else, tank drive
+        if (arcadeDrive)
+            myRobot.arcadeDrive(-controller.getX(), controller.getRawAxis(3)*driveSpeed);
+        else
+            myRobot.tankDrive(-1 * controller.getY() * driveSpeed, -1 * controller.getX() * driveSpeed, true);
 
     }
 
-    private void startReaderThread() {
+    private void motorController() {
 
-        arcadeDrive = controller.getRawButton(4);
-
-        //reader thread prints out arcade drive is active/inactive while enabling/disabling
-        reader = new Thread(() -> {
-            while (!Thread.interrupted()) {
-
-                if (arcadeDrive != controller.getRawButton(4)) {
-                    arcadeDrive = controller.getRawButton(4); //enable/disable
-                    if (arcadeDrive)
-                        System.out.println("Arcade drive is active!");
-                    else
-                        System.out.println("Arcade drive is inactive!");
-
-                }
-
-            }
-        });
-
-        reader.start();
+        //getRawAxis gives values from -1 to 1
+        mSpeed = controller.getRawAxis(6);
+        eMotor.setSpeed(mSpeed);
 
     }
+
 }
