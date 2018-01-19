@@ -11,7 +11,7 @@ import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
 
-//test
+//josh was here :-)
 public class Robot extends IterativeRobot {
 
     private DifferentialDrive myRobot; //"tank drive"
@@ -34,6 +34,8 @@ public class Robot extends IterativeRobot {
         solenoid2 = new Solenoid (1);
         eMotor = new Spark(2);
 
+
+        eMotor.setSafetyEnabled(false);
     }
 
     @Override
@@ -93,31 +95,31 @@ public class Robot extends IterativeRobot {
         switch (location) {
             case 1:
                 if (plateColors.charAt(0) == 'L') {
-                    //drive to left side of switch past auto line, place power cube on
+                    System.out.println("drive to left side of switch past auto line, place power cube on");//drive to left side of switch past auto line, place power cube on
                 } else if (plateColors.charAt(1) == 'L') {
-                    //drive to left side of scale, place power cube on
+                    System.out.println("drive to left side of scale, place power cube on");//drive to left side of scale, place power cube on
                 } else {
-                    //drive to right side of scale, place power cube on
+                    System.out.println("drive to right side of scale, place power cube on");//drive to right side of scale, place power cube on
                 }
 
                 break;
 
             case 2:
                 if (plateColors.charAt(0) == 'L') {
-                    //drive to left side of switch past auto line, place power cube on
+                    System.out.println("drive to left side of switch past auto line, place power cube on");//drive to left side of switch past auto line, place power cube on
                 } else {
-                    //drive to right side of switch past auto line, place power cube on
+                    System.out.println("drive to right side of switch past auto line, place power cube on");//drive to right side of switch past auto line, place power cube on
                 }
 
                 break;
 
             case 3:
                 if (plateColors.charAt(0) == 'R') {
-                    //drive to right side of switch past auto line, place power cube on
+                    System.out.println("drive to right side of switch past auto line, place power cube on");//drive to right side of switch past auto line, place power cube on
                 } else if (plateColors.charAt(1) == 'R') {
-                    //drive to right side of the scale, place power cube on
+                    System.out.println("drive to right side of the scale, place power cube on");//drive to right side of the scale, place power cube on
                 } else {
-                    //drive to left side of the scale, place power cube on
+                    System.out.println("drive to left side of the scale, place power cube on");//drive to left side of the scale, place power cube on
                 }
 
                 break;
