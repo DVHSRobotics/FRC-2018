@@ -11,10 +11,10 @@ import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
 
-//josh was here :-)
+//josh was here :^^^^^^^)
 public class Robot extends IterativeRobot {
 
-    private DifferentialDrive myRobot; //"tank drive"
+    private DifferentialDrive myRobot;
     private Joystick controller;
     private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered;
     private Thread reader;
