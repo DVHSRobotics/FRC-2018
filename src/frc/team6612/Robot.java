@@ -11,7 +11,7 @@ import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
 
-//josh was here :^^^^^^^)
+//josh was here :^)
 public class Robot extends IterativeRobot {
 
     private DifferentialDrive myRobot;
@@ -35,7 +35,7 @@ public class Robot extends IterativeRobot {
         eMotor = new Spark(2);
 
 
-        eMotor.setSafetyEnabled(false);
+
     }
 
     @Override
@@ -159,6 +159,7 @@ public class Robot extends IterativeRobot {
 
         //getRawAxis gives values from -1 to 1
         mSpeed = controller.getRawAxis(6);
+        eMotor.setSafetyEnabled(false);
         eMotor.setSpeed(mSpeed);
 
     }
