@@ -19,7 +19,7 @@ public class Robot extends IterativeRobot {
     private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered;
     private Thread reader;
     private double mSpeed, driveSpeed;
-    private Spark eMotor;
+    private Spark motorController;
     private Compressor c;
     private Solenoid solenoid1, solenoid2;
 
@@ -32,16 +32,15 @@ public class Robot extends IterativeRobot {
         c = new Compressor(0);
         solenoid1 = new Solenoid(0);
         solenoid2 = new Solenoid (1);
-        eMotor = new Spark(2);
+        motorController = new Spark(2);
 
-
-        eMotor.setSafetyEnabled(false);
     }
 
     @Override
     public void autonomousInit() {
 
         moveToPosition();
+        fireCube();
 
     }
 
@@ -57,7 +56,7 @@ public class Robot extends IterativeRobot {
 
         motorController();
         driveControl();
-        airCompressor();
+        pistonControl();
 
     }
 
@@ -95,31 +94,31 @@ public class Robot extends IterativeRobot {
         switch (location) {
             case 1:
                 if (plateColors.charAt(0) == 'L') {
-                    System.out.println("drive to left side of switch past auto line, place power cube on");//drive to left side of switch past auto line, place power cube on
+                    System.out.println("drive to left side of switch past auto line, place power cube on");
                 } else if (plateColors.charAt(1) == 'L') {
-                    System.out.println("drive to left side of scale, place power cube on");//drive to left side of scale, place power cube on
+                    System.out.println("drive to left side of scale, place power cube on");
                 } else {
-                    System.out.println("drive to right side of scale, place power cube on");//drive to right side of scale, place power cube on
+                    System.out.println("drive to right side of scale, place power cube on");
                 }
 
                 break;
 
             case 2:
                 if (plateColors.charAt(0) == 'L') {
-                    System.out.println("drive to left side of switch past auto line, place power cube on");//drive to left side of switch past auto line, place power cube on
+                    System.out.println("drive to left side of switch past auto line, place power cube on");
                 } else {
-                    System.out.println("drive to right side of switch past auto line, place power cube on");//drive to right side of switch past auto line, place power cube on
+                    System.out.println("drive to right side of switch past auto line, place power cube on");
                 }
 
                 break;
 
             case 3:
                 if (plateColors.charAt(0) == 'R') {
-                    System.out.println("drive to right side of switch past auto line, place power cube on");//drive to right side of switch past auto line, place power cube on
+                    System.out.println("drive to right side of switch past auto line, place power cube on");
                 } else if (plateColors.charAt(1) == 'R') {
-                    System.out.println("drive to right side of the scale, place power cube on");//drive to right side of the scale, place power cube on
+                    System.out.println("drive to right side of the scale, place power cube on");
                 } else {
-                    System.out.println("drive to left side of the scale, place power cube on");//drive to left side of the scale, place power cube on
+                    System.out.println("drive to left side of the scale, place power cube on");
                 }
 
                 break;
@@ -127,14 +126,15 @@ public class Robot extends IterativeRobot {
 
     }
 
-    private void airCompressor() {
+    private void fireCube(){
+        
+    }
+
+    private void pistonControl() {
 
         compressAir = controller.getRawButton(5);
+        c.setClosedLoopControl(compressAir);
 
-        if (compressAir)
-            c.setClosedLoopControl(true);
-        else
-            c.setClosedLoopControl(false);
 
         soleOnePowered = controller.getRawButton(6);
         soleTwoPowered = controller.getRawButton(7);
@@ -151,7 +151,7 @@ public class Robot extends IterativeRobot {
         if (arcadeDrive)
             myRobot.arcadeDrive(-controller.getX(), controller.getRawAxis(3)*driveSpeed);
         else
-            myRobot.tankDrive(-1 * controller.getY() * driveSpeed, -1 * controller.getX() * driveSpeed, true);
+            myRobot.tankDrive(-1 * controller.getY() * driveSpeed, -1 * controller.getX() * driveSpeed);
 
     }
 
@@ -159,7 +159,7 @@ public class Robot extends IterativeRobot {
 
         //getRawAxis gives values from -1 to 1
         mSpeed = controller.getRawAxis(6);
-        eMotor.setSpeed(mSpeed);
+        motorController.setSpeed(mSpeed);
 
     }
 
