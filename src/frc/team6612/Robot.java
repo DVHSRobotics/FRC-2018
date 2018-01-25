@@ -9,10 +9,12 @@ package frc.team6612;
 
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
-
+import com.kauailabs.navx.frc.AHRS;
 
 //josh was here :-)
 public class Robot extends IterativeRobot {
+
+    private AHRS sensor;
 
     private DifferentialDrive myRobot; //"tank drive"
     private Joystick controller;
@@ -27,6 +29,8 @@ public class Robot extends IterativeRobot {
     public void robotInit() {
 
         //Objects Initialization :-)
+        sensor = new AHRS(I2C.Port.kMXP);
+
         myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
         controller = new Joystick(0);
         c = new Compressor(0);
@@ -58,6 +62,9 @@ public class Robot extends IterativeRobot {
         driveControl();
         pistonControl();
 
+        if(controller.getRawButton(2))
+            turnDegrees(90);
+
     }
 
     private void startReaderThread() {
@@ -68,14 +75,7 @@ public class Robot extends IterativeRobot {
         reader = new Thread(() -> {
             while (!Thread.interrupted()) {
 
-                if (arcadeDrive != controller.getRawButton(4)) {
-                    arcadeDrive = controller.getRawButton(4); //enable/disable
-                    if (arcadeDrive)
-                        System.out.println("Arcade drive is active!");
-                    else
-                        System.out.println("Arcade drive is inactive!");
-
-                }
+                System.out.println(sensor.getAngle());
 
             }
         });
@@ -145,6 +145,16 @@ public class Robot extends IterativeRobot {
     }
 
     private void driveControl() {
+
+        //Prints if arcadeDrive is enabled/disabled
+        if (arcadeDrive != controller.getRawButton(4)) {
+            arcadeDrive = controller.getRawButton(4); //enable/disable
+            if (arcadeDrive)
+                System.out.println("Arcade drive is active!");
+            else
+                System.out.println("Arcade drive is inactive!");
+
+        }
 
         driveSpeed = controller.getRawAxis(7);
         //if arcadeDrive is true, set drive method to arcade drive; else, tank drive
