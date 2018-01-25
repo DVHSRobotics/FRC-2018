@@ -10,7 +10,6 @@ package frc.team6612;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
-
 //josh was here :-)
 public class Robot extends IterativeRobot {
 
@@ -127,7 +126,7 @@ public class Robot extends IterativeRobot {
     }
 
     private void fireCube(){
-        
+        //placeholder
     }
 
     private void pistonControl() {
