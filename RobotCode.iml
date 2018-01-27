@@ -44,16 +44,6 @@
         <jarDirectory url="file://$USER_HOME$/wpilib/user/java/lib" recursive="true" type="SOURCES" />
       </library>
     </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="jar://$navx-mxp$!/" />
-        </CLASSES>
-        <JAVADOC>
-          <root url="jar://$navx-mxp$!/docs" />
-        </JAVADOC>
-        <SOURCES />
-      </library>
-    </orderEntry>
+    <orderEntry type="library" name="navx_frc" level="project" />
   </component>
 </module>

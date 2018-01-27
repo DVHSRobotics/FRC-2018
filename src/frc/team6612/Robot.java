@@ -9,7 +9,7 @@ package frc.team6612;
 
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
-import com.kauailabs.navx.frc.AHRS;
+import com.kauailabs.navx.frc.*;
 
 //josh was here :-)
 public class Robot extends IterativeRobot {
@@ -62,8 +62,8 @@ public class Robot extends IterativeRobot {
         driveControl();
         pistonControl();
 
-        if(controller.getRawButton(2))
-            turnDegrees(90);
+        //if(controller.getRawButton(2))
+            //turnDegrees(90);
 
     }
 
