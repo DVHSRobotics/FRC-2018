@@ -12,31 +12,38 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import com.kauailabs.navx.frc.*;
 
 //josh was here :-)
-public class Robot extends IterativeRobot {
+public class Robot extends IterativeRobot implements PIDOutput {
 
-    private AHRS sensor;
+    //min turn speed = 0.45-0.47
+
+    private AHRS sensor; //the sensor pulling data from the robot
+    private PIDController pid; //does calculations to make accurate turns
+    private Encoder encoder;
 
     private DifferentialDrive myRobot; //"tank drive"
     private Joystick controller;
     private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered;
     private Thread reader;
-    private double mSpeed, driveSpeed;
-    private Spark motorController;
+    private double mSpeed, driveSpeed, rotation;
+    private Spark motorTest;
     private Compressor c;
     private Solenoid solenoid1, solenoid2;
+    private double kP = 0.03f, kI = 0, kD = 0.05, /*0.04 kD is good*/ kF = 0;
 
     @Override
     public void robotInit() {
 
         //Objects Initialization :-)
+        motorTest = new Spark(3);
         sensor = new AHRS(I2C.Port.kMXP);
+        pid = new PIDController(kP, kI, kD, kF, sensor, this);
+        encoder = new Encoder(0,1);
 
         myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
         controller = new Joystick(0);
         c = new Compressor(0);
         solenoid1 = new Solenoid(0);
         solenoid2 = new Solenoid (1);
-        motorController = new Spark(2);
 
     }
 
@@ -46,12 +53,30 @@ public class Robot extends IterativeRobot {
         moveToPosition();
         fireCube();
 
+        //test code
+        //PID starts, setpoint is the amount to turn
+
+        sensor.reset();
+        pid.enable();
+        pid.setSetpoint(90f);
+
+    }
+
+    @Override
+    public void autonomousPeriodic() {
+
+        myRobot.arcadeDrive(0, rotation);
+
+        //rotation is set in PIDWrite
+        //because the robot is passed in pid constructor as output
+
     }
 
     @Override
     public void teleopInit() {
 
         startReaderThread();
+        motorTest.setSafetyEnabled(false);
 
     }
 
@@ -59,11 +84,14 @@ public class Robot extends IterativeRobot {
     public void teleopPeriodic() {
 
         motorController();
-        driveControl();
-        pistonControl();
+        //driveControl();
+        //pistonControl();
 
-        //if(controller.getRawButton(2))
-            //turnDegrees(90);
+        //min rotation test
+        myRobot.arcadeDrive(0, controller.getRawAxis(4));
+        //System.out.println("3: " + controller.getRawAxis(3) +"\n4: " + controller.getRawAxis(4) +"\n5: " + controller.getRawAxis(5) +"\n6: " + controller.getRawAxis(6) + "\n7: " + controller.getRawAxis(7) + "\n8: " + controller.getRawAxis(8));
+
+
 
     }
 
@@ -75,7 +103,7 @@ public class Robot extends IterativeRobot {
         reader = new Thread(() -> {
             while (!Thread.interrupted()) {
 
-                System.out.println(sensor.getAngle());
+                //System.out.println(sensor.getAngle());
 
             }
         });
@@ -156,7 +184,7 @@ public class Robot extends IterativeRobot {
 
         }
 
-        driveSpeed = controller.getRawAxis(7);
+        driveSpeed = 1;
         //if arcadeDrive is true, set drive method to arcade drive; else, tank drive
         if (arcadeDrive)
             myRobot.arcadeDrive(-controller.getX(), controller.getRawAxis(3)*driveSpeed);
@@ -167,9 +195,18 @@ public class Robot extends IterativeRobot {
 
     private void motorController() {
 
-        //getRawAxis gives values from -1 to 1
-        mSpeed = controller.getRawAxis(6);
-        motorController.setSpeed(mSpeed);
+        motorTest.setSpeed(controller.getRawAxis(5));
+        System.out.println(encoder.get());
+
+    }
+
+    public void pidWrite(double rotation) {
+
+        if(rotation > 0)
+            this.rotation = (rotation + 0.5)/1.5;
+        else
+            this.rotation = (rotation - 0.5)/1.5;
+        System.out.println(rotation);
 
     }
 
