@@ -14,7 +14,6 @@ import com.kauailabs.navx.frc.*;
 //josh was here :-)
 public class Robot extends IterativeRobot implements PIDOutput {
 
-    //min turn speed = 0.45-0.47
 
     private AHRS sensor; //the sensor pulling data from the robot
     private PIDController pid; //does calculations to make accurate turns
@@ -24,10 +23,10 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Joystick controller;
     private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered;
     private Thread reader;
-    private double mSpeed, driveSpeed, rotation;
+    private double driveSpeed, rotation, MIN_ROTATIONSPEED;
     private Spark motorTest;
-    private Compressor c;
-    private Solenoid solenoid1, solenoid2;
+    private Compressor compressor;
+    private Solenoid solenoid1, solenoid2; //pneumatic control for cube launch
     private double kP = 0.03f, kI = 0, kD = 0.05, /*0.04 kD is good*/ kF = 0;
 
     @Override
@@ -38,10 +37,11 @@ public class Robot extends IterativeRobot implements PIDOutput {
         sensor = new AHRS(I2C.Port.kMXP);
         pid = new PIDController(kP, kI, kD, kF, sensor, this);
         encoder = new Encoder(0,1);
+        MIN_ROTATIONSPEED = 0.45 /* min turn speed = 0.45-0.47, found by testing */;
 
         myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
         controller = new Joystick(0);
-        c = new Compressor(0);
+        compressor = new Compressor(0);
         solenoid1 = new Solenoid(0);
         solenoid2 = new Solenoid (1);
 
@@ -89,9 +89,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         //min rotation test
         myRobot.arcadeDrive(0, controller.getRawAxis(4));
-        //System.out.println("3: " + controller.getRawAxis(3) +"\n4: " + controller.getRawAxis(4) +"\n5: " + controller.getRawAxis(5) +"\n6: " + controller.getRawAxis(6) + "\n7: " + controller.getRawAxis(7) + "\n8: " + controller.getRawAxis(8));
-
-
 
     }
 
@@ -161,8 +158,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private void pistonControl() {
 
         compressAir = controller.getRawButton(5);
-        c.setClosedLoopControl(compressAir);
-
+        compressor.setClosedLoopControl(compressAir);
 
         soleOnePowered = controller.getRawButton(6);
         soleTwoPowered = controller.getRawButton(7);
@@ -203,9 +199,11 @@ public class Robot extends IterativeRobot implements PIDOutput {
     public void pidWrite(double rotation) {
 
         if(rotation > 0)
-            this.rotation = (rotation + 0.5)/1.5;
+            this.rotation = rotation + MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
+            //value goes from 0 - 1 to MIN_ROTATIONSPEED - 1
         else
-            this.rotation = (rotation - 0.5)/1.5;
+            this.rotation = rotation - MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
+            //value goes from -1 - 0 to -1 - -MIN_ROTATIONSPEED
         System.out.println(rotation);
 
     }
