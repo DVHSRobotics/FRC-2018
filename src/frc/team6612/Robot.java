@@ -10,6 +10,8 @@ package frc.team6612;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import com.kauailabs.navx.frc.*;
+import edu.wpi.first.wpilibj.livewindow.LiveWindow;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 //josh was here :-)
 public class Robot extends IterativeRobot implements PIDOutput {
@@ -27,7 +29,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Spark motorTest;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2; //pneumatic control for cube launch
-    private double kP = 0.03f, kI = 0, kD = 0.05, /*0.04 kD is good*/ kF = 0;
+    private double kP = 0.03, kI = 0.0, kD = 0.04, kF = 0;
 
     @Override
     public void robotInit() {
@@ -37,13 +39,22 @@ public class Robot extends IterativeRobot implements PIDOutput {
         sensor = new AHRS(I2C.Port.kMXP);
         pid = new PIDController(kP, kI, kD, kF, sensor, this);
         encoder = new Encoder(0,1);
-        MIN_ROTATIONSPEED = 0.45 /* min turn speed = 0.45-0.47, found by testing */;
+        MIN_ROTATIONSPEED = 0.4 /* min turn speed = 0.45-0.47, found by testing */;
 
         myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
         controller = new Joystick(0);
         compressor = new Compressor(0);
         solenoid1 = new Solenoid(0);
         solenoid2 = new Solenoid (1);
+
+
+        LiveWindow.addActuator("Turning", "PID", pid);
+        /*
+        SmartDashboard.putNumber("kP", kP);
+        SmartDashboard.putNumber("kI", kI);
+        SmartDashboard.putNumber("kD", kD);
+        SmartDashboard.putNumber("Minimum Speed", MIN_ROTATIONSPEED);
+        */
 
     }
 
@@ -59,13 +70,14 @@ public class Robot extends IterativeRobot implements PIDOutput {
         sensor.reset();
         pid.enable();
         pid.setSetpoint(90f);
+        myRobot.arcadeDrive(0, rotation);
 
     }
 
     @Override
     public void autonomousPeriodic() {
 
-        myRobot.arcadeDrive(0, rotation);
+        //myRobot.arcadeDrive(0, rotation);
 
         //rotation is set in PIDWrite
         //because the robot is passed in pid constructor as output
@@ -199,13 +211,28 @@ public class Robot extends IterativeRobot implements PIDOutput {
     public void pidWrite(double rotation) {
 
         if(rotation > 0)
-            this.rotation = rotation + MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
+            this.rotation = rotation; //+ MIN_ROTATIONSPEED)%1; //- (rotation * MIN_ROTATIONSPEED);
             //value goes from 0 - 1 to MIN_ROTATIONSPEED - 1
         else
-            this.rotation = rotation - MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
+            this.rotation = rotation; //- MIN_ROTATIONSPEED)%1; //- (rotation * MIN_ROTATIONSPEED);
             //value goes from -1 - 0 to -1 - -MIN_ROTATIONSPEED
-        System.out.println(rotation);
+        System.out.println(this.rotation);
 
     }
 
+    public void testPeriodic() {
+        pid.setOutputRange(-0.75,0.75);
+        //pid.setAbsoluteTolerance(.5);
+        System.out.println(sensor.getAngle());
+        if(controller.getRawButton(8)){
+            pid.setSetpoint(90);
+            pid.enable();
+            myRobot.arcadeDrive(0,rotation);
+        }
+        else {
+            sensor.reset();
+            pid.disable();
+            myRobot.arcadeDrive(0, 0);
+        }
+    }
 }
