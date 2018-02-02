@@ -231,7 +231,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         }
         else {
             sensor.reset();
-            pid.disable();
+            pid.disable(); 
             myRobot.arcadeDrive(0, 0);
         }
     }
