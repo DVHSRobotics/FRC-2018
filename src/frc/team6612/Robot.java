@@ -16,20 +16,21 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 //josh was here :-)
 public class Robot extends IterativeRobot implements PIDOutput {
 
-
     private AHRS sensor; //the sensor pulling data from the robot
     private PIDController pid; //does calculations to make accurate turns
     private Encoder encoder;
+    private Timer timer;
 
     private DifferentialDrive myRobot; //"tank drive"
     private Joystick controller;
     private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered;
     private Thread reader;
-    private double driveSpeed, rotation, MIN_ROTATIONSPEED;
+    private final double MIN_ROTATIONSPEED = 0.41;
+    private double driveSpeed, rotation, deltaTime;
     private Spark motorTest;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2; //pneumatic control for cube launch
-    private double kP = 0.03, kI = 0.0, kD = 0.04, kF = 0;
+    private double kP = 0.025, kI = 0.0, kD = 0.1, kF = 0;
 
     @Override
     public void robotInit() {
@@ -39,22 +40,22 @@ public class Robot extends IterativeRobot implements PIDOutput {
         sensor = new AHRS(I2C.Port.kMXP);
         pid = new PIDController(kP, kI, kD, kF, sensor, this);
         encoder = new Encoder(0,1);
-        MIN_ROTATIONSPEED = 0.4 /* min turn speed = 0.45-0.47, found by testing */;
-
         myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
         controller = new Joystick(0);
+        timer = new Timer();
+
+        //Variable Settings
+        pid.setOutputRange(-0.75,0.75);
+        timer.start();
+
+        /*
         compressor = new Compressor(0);
         solenoid1 = new Solenoid(0);
         solenoid2 = new Solenoid (1);
-
-
-        LiveWindow.addActuator("Turning", "PID", pid);
-        /*
-        SmartDashboard.putNumber("kP", kP);
-        SmartDashboard.putNumber("kI", kI);
-        SmartDashboard.putNumber("kD", kD);
-        SmartDashboard.putNumber("Minimum Speed", MIN_ROTATIONSPEED);
         */
+
+        liveWindow();
+
 
     }
 
@@ -87,7 +88,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void teleopInit() {
 
-        startReaderThread();
         motorTest.setSafetyEnabled(false);
 
     }
@@ -96,28 +96,20 @@ public class Robot extends IterativeRobot implements PIDOutput {
     public void teleopPeriodic() {
 
         motorController();
-        //driveControl();
+        driveControl();
         //pistonControl();
-
-        //min rotation test
-        myRobot.arcadeDrive(0, controller.getRawAxis(4));
 
     }
 
-    private void startReaderThread() {
+    @Override
+    public void testInit() {
+        turnAngle(90);
+    }
 
-        arcadeDrive = controller.getRawButton(4);
+    private void liveWindow() {
 
-        //reader thread prints out arcade drive is active/inactive while enabling/disabling
-        reader = new Thread(() -> {
-            while (!Thread.interrupted()) {
-
-                //System.out.println(sensor.getAngle());
-
-            }
-        });
-
-        reader.start();
+        LiveWindow.addActuator("Turning", "PID", pid);
+        SmartDashboard.putNumber("Minimum Speed", MIN_ROTATIONSPEED);
 
     }
 
@@ -164,7 +156,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     }
 
     private void fireCube(){
-        
+        //placeholder
     }
 
     private void pistonControl() {
@@ -211,28 +203,26 @@ public class Robot extends IterativeRobot implements PIDOutput {
     public void pidWrite(double rotation) {
 
         if(rotation > 0)
-            this.rotation = rotation; //+ MIN_ROTATIONSPEED)%1; //- (rotation * MIN_ROTATIONSPEED);
+            this.rotation = rotation + MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
             //value goes from 0 - 1 to MIN_ROTATIONSPEED - 1
         else
-            this.rotation = rotation; //- MIN_ROTATIONSPEED)%1; //- (rotation * MIN_ROTATIONSPEED);
+            this.rotation = rotation - MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
             //value goes from -1 - 0 to -1 - -MIN_ROTATIONSPEED
         System.out.println(this.rotation);
 
     }
 
-    public void testPeriodic() {
-        pid.setOutputRange(-0.75,0.75);
-        //pid.setAbsoluteTolerance(.5);
-        System.out.println(sensor.getAngle());
-        if(controller.getRawButton(8)){
-            pid.setSetpoint(90);
-            pid.enable();
-            myRobot.arcadeDrive(0,rotation);
+    private void turnAngle(double angle) { 
+
+        pid.enable();
+        pid.setSetpoint(angle);
+        timer.reset();
+
+        while(!timer.hasPeriodPassed(2)) {
+            myRobot.arcadeDrive(0, rotation);
         }
-        else {
-            sensor.reset();
-            pid.disable(); 
-            myRobot.arcadeDrive(0, 0);
-        }
+
+        pid.disable();
     }
+
 }
