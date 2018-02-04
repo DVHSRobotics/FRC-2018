@@ -19,7 +19,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private AHRS sensor; //the sensor pulling data from the robot
     private PIDController pid; //does calculations to make accurate turns
     private Encoder encoder;
-    private Timer timer;
 
     private DifferentialDrive myRobot; //"tank drive"
     private Joystick controller;
@@ -42,11 +41,11 @@ public class Robot extends IterativeRobot implements PIDOutput {
         encoder = new Encoder(0,1);
         myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
         controller = new Joystick(0);
-        timer = new Timer();
 
         //Variable Settings
         pid.setOutputRange(-0.75,0.75);
-        timer.start();
+        pid.setInputRange(-160, 160);
+        pid.setAbsoluteTolerance(1); //min. degree that pid can read. If it's within 1 degree, returns pid.onTarget() as true
 
         /*
         compressor = new Compressor(0);
@@ -65,13 +64,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
         moveToPosition();
         fireCube();
 
-        //test code
-        //PID starts, setpoint is the amount to turn
-
-        sensor.reset();
-        pid.enable();
-        pid.setSetpoint(90f);
-        myRobot.arcadeDrive(0, rotation);
 
     }
 
@@ -216,13 +208,13 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         pid.enable();
         pid.setSetpoint(angle);
-        timer.reset();
 
-        while(!timer.hasPeriodPassed(2)) {
+        while(!pid.onTarget() || rotation > 0.42) {
             myRobot.arcadeDrive(0, rotation);
         }
 
         pid.disable();
+
     }
 
 }
