@@ -206,6 +206,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void turnAngle(double angle) { 
 
+        sensor.reset();
         pid.enable();
         pid.setSetpoint(angle);
 
