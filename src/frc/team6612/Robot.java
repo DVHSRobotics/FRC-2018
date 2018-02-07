@@ -25,7 +25,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered;
     private Thread reader;
     private final double MIN_ROTATIONSPEED = 0.41;
-    private double driveSpeed, rotation, deltaTime;
+    private double driveSpeed, rotation;
     private Spark motorTest;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2; //pneumatic control for cube launch
@@ -102,6 +102,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         LiveWindow.addActuator("Turning", "PID", pid);
         SmartDashboard.putNumber("Minimum Speed", MIN_ROTATIONSPEED);
+        SmartDashboard.putNumber("Rotation Speed", rotation);
 
     }
 
@@ -200,18 +201,22 @@ public class Robot extends IterativeRobot implements PIDOutput {
         else
             this.rotation = rotation - MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
             //value goes from -1 - 0 to -1 - -MIN_ROTATIONSPEED
-        System.out.println(this.rotation);
 
     }
 
-    private void turnAngle(double angle) { 
+    private void turnAngle(double angle) {
+
+        double lastTime = System.currentTimeMillis(), deltaTime, totalTime = 0; //Time delay for 2 seconds
 
         sensor.reset();
         pid.enable();
         pid.setSetpoint(angle);
 
-        while(!pid.onTarget() || rotation > 0.42) {
+        while((!pid.onTarget() || rotation > 0.42) && totalTime < 2) {
             myRobot.arcadeDrive(0, rotation);
+            deltaTime = System.currentTimeMillis() - lastTime;
+            lastTime = System.currentTimeMillis();
+            totalTime += deltaTime;
         }
 
         pid.disable();
