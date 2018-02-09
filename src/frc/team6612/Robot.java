@@ -9,29 +9,55 @@ package frc.team6612;
 
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import com.kauailabs.navx.frc.*;
+import edu.wpi.first.wpilibj.livewindow.LiveWindow;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 //josh was here :-)
-public class Robot extends IterativeRobot {
+public class Robot extends IterativeRobot implements PIDOutput {
+
+    private AHRS sensor; //the sensor pulling data from the robot
+    private PIDController pid; //does calculations to make accurate turns
+    private Encoder encoder; //wheel
+    private DigitalInput arduino;
 
     private DifferentialDrive myRobot; //"tank drive"
     private Joystick controller;
-    private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered;
+    private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered, autonomousEnabled;
     private Thread reader;
-    private double mSpeed, driveSpeed;
-    private Spark motorController;
-    private Compressor c;
-    private Solenoid solenoid1, solenoid2;
+    private final double MIN_ROTATIONSPEED = 0.41;
+    private double driveSpeed, rotation;
+    private Spark motorTest;
+    private Compressor compressor;
+    private Solenoid solenoid1, solenoid2; //pneumatic control for cube launch
+    private double kP = 0.025, kI = 0.0, kD = 0.1, kF = 0;
 
     @Override
     public void robotInit() {
 
         //Objects Initialization :-)
+        motorTest = new Spark(3);
+        sensor = new AHRS(I2C.Port.kMXP);
+        pid = new PIDController(kP, kI, kD, kF, sensor, this);
+        encoder = new Encoder(0,1);
         myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
         controller = new Joystick(0);
-        c = new Compressor(0);
+        arduino = new DigitalInput(9);
+
+
+        //Variable Settings
+        pid.setOutputRange(-0.75,0.75);
+        pid.setInputRange(-160, 160);
+        pid.setAbsoluteTolerance(1); //min. degree that pid can read. If it's within 1 degree, returns pid.onTarget() as true
+
+        /*
+        compressor = new Compressor(0);
         solenoid1 = new Solenoid(0);
         solenoid2 = new Solenoid (1);
-        motorController = new Spark(2);
+        */
+
+        liveWindow();
+
 
     }
 
@@ -41,45 +67,55 @@ public class Robot extends IterativeRobot {
         moveToPosition();
         fireCube();
 
+
+    }
+
+    @Override
+    public void autonomousPeriodic() {
+
+        //myRobot.arcadeDrive(0, rotation);
+
+        //rotation is set in PIDWrite
+        //because the robot is passed in pid constructor as output
+
     }
 
     @Override
     public void teleopInit() {
 
-        startReaderThread();
+        motorTest.setSafetyEnabled(false);
 
     }
 
     @Override
     public void teleopPeriodic() {
 
+        System.out.println(arduino.get());
         motorController();
         driveControl();
-        pistonControl();
+        //pistonControl();
 
     }
 
-    private void startReaderThread() {
+    @Override
+    public void testInit() {
+        autonomousEnabled = true;
+        for(int i = 1; i < 5; i++) {
+            turnAngle(90, 2);
+            System.out.println(sensor.getAngle());
+        }
+    }
 
-        arcadeDrive = controller.getRawButton(4);
+    @Override
+    public void disabledInit() {
+        disableAuto();
+    }
 
-        //reader thread prints out arcade drive is active/inactive while enabling/disabling
-        reader = new Thread(() -> {
-            while (!Thread.interrupted()) {
+    private void liveWindow() {
 
-                if (arcadeDrive != controller.getRawButton(4)) {
-                    arcadeDrive = controller.getRawButton(4); //enable/disable
-                    if (arcadeDrive)
-                        System.out.println("Arcade drive is active!");
-                    else
-                        System.out.println("Arcade drive is inactive!");
-
-                }
-
-            }
-        });
-
-        reader.start();
+        LiveWindow.addActuator("Turning", "PID", pid);
+        SmartDashboard.putNumber("Minimum Speed", MIN_ROTATIONSPEED);
+        SmartDashboard.putNumber("Rotation Speed", rotation);
 
     }
 
@@ -132,8 +168,7 @@ public class Robot extends IterativeRobot {
     private void pistonControl() {
 
         compressAir = controller.getRawButton(5);
-        c.setClosedLoopControl(compressAir);
-
+        compressor.setClosedLoopControl(compressAir);
 
         soleOnePowered = controller.getRawButton(6);
         soleTwoPowered = controller.getRawButton(7);
@@ -145,7 +180,17 @@ public class Robot extends IterativeRobot {
 
     private void driveControl() {
 
-        driveSpeed = controller.getRawAxis(7);
+        //Prints if arcadeDrive is enabled/disabled
+        if (arcadeDrive != controller.getRawButton(4)) {
+            arcadeDrive = controller.getRawButton(4); //enable/disable
+            if (arcadeDrive)
+                System.out.println("Arcade drive is active!");
+            else
+                System.out.println("Arcade drive is inactive!");
+
+        }
+
+        driveSpeed = 1;
         //if arcadeDrive is true, set drive method to arcade drive; else, tank drive
         if (arcadeDrive)
             myRobot.arcadeDrive(-controller.getX(), controller.getRawAxis(3)*driveSpeed);
@@ -156,9 +201,42 @@ public class Robot extends IterativeRobot {
 
     private void motorController() {
 
-        //getRawAxis gives values from -1 to 1
-        mSpeed = controller.getRawAxis(6);
-        motorController.setSpeed(mSpeed);
+        motorTest.setSpeed(controller.getRawAxis(5));
+
+    }
+
+    public void pidWrite(double rotation) {
+
+        if(rotation > 0)
+            this.rotation = rotation + MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
+            //value goes from 0 - 1 to MIN_ROTATIONSPEED - 1
+        else
+            this.rotation = rotation - MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
+            //value goes from -1 - 0 to -1 - -MIN_ROTATIONSPEED
+
+    }
+
+    private void disableAuto() {
+        if(autonomousEnabled)
+            autonomousEnabled = !autonomousEnabled;
+    }
+
+    private void turnAngle(double angle, double timeout) {
+
+        double lastTime = System.currentTimeMillis()/1000, deltaTime, totalTime = 0; //Time delay for 2 seconds
+
+        sensor.reset();
+        pid.enable();
+        pid.setSetpoint(angle);
+
+        while(((!pid.onTarget() || rotation > 0.42) && totalTime < timeout) && autonomousEnabled) {
+            myRobot.arcadeDrive(0, rotation);
+            deltaTime = System.currentTimeMillis()/1000 - lastTime;
+            lastTime = System.currentTimeMillis()/1000;
+            totalTime += deltaTime;
+        }
+
+        pid.disable();
 
     }
 
