@@ -94,6 +94,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         motorController();
         driveControl();
         //pistonControl();
+        //Methods for Forklift, Claw
 
     }
 
@@ -163,6 +164,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void fireCube(){
         //placeholder
+        //Using back launch mechanism
     }
 
     private void pistonControl() {
