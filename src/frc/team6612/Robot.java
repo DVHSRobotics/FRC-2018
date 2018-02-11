@@ -18,11 +18,12 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private AHRS sensor; //the sensor pulling data from the robot
     private PIDController pid; //does calculations to make accurate turns
-    private Encoder encoder;
+    private Encoder encoder; //wheel
+    private DigitalInput arduino;
 
     private DifferentialDrive myRobot; //"tank drive"
     private Joystick controller;
-    private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered;
+    private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered, autonomousEnabled;
     private Thread reader;
     private final double MIN_ROTATIONSPEED = 0.41;
     private double driveSpeed, rotation;
@@ -41,6 +42,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
         encoder = new Encoder(0,1);
         myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
         controller = new Joystick(0);
+        arduino = new DigitalInput(9);
+
 
         //Variable Settings
         pid.setOutputRange(-0.75,0.75);
@@ -87,6 +90,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void teleopPeriodic() {
 
+        System.out.println(arduino.get());
         motorController();
         driveControl();
         //pistonControl();
@@ -95,7 +99,16 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     @Override
     public void testInit() {
-        turnAngle(90);
+        autonomousEnabled = true;
+        for(int i = 1; i < 5; i++) {
+            turnAngle(90, 2);
+            System.out.println(sensor.getAngle());
+        }
+    }
+
+    @Override
+    public void disabledInit() {
+        disableAuto();
     }
 
     private void liveWindow() {
@@ -189,7 +202,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private void motorController() {
 
         motorTest.setSpeed(controller.getRawAxis(5));
-        System.out.println(encoder.get());
 
     }
 
@@ -204,18 +216,23 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     }
 
-    private void turnAngle(double angle) {
+    private void disableAuto() {
+        if(autonomousEnabled)
+            autonomousEnabled = !autonomousEnabled;
+    }
 
-        double lastTime = System.currentTimeMillis(), deltaTime, totalTime = 0; //Time delay for 2 seconds
+    private void turnAngle(double angle, double timeout) {
+
+        double lastTime = System.currentTimeMillis()/1000, deltaTime, totalTime = 0; //Time delay for 2 seconds
 
         sensor.reset();
         pid.enable();
         pid.setSetpoint(angle);
 
-        while((!pid.onTarget() || rotation > 0.42) && totalTime < 2) {
+        while(((!pid.onTarget() || rotation > 0.42) && totalTime < timeout) && autonomousEnabled) {
             myRobot.arcadeDrive(0, rotation);
-            deltaTime = System.currentTimeMillis() - lastTime;
-            lastTime = System.currentTimeMillis();
+            deltaTime = System.currentTimeMillis()/1000 - lastTime;
+            lastTime = System.currentTimeMillis()/1000;
             totalTime += deltaTime;
         }
 
