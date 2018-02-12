@@ -13,7 +13,6 @@ import com.kauailabs.navx.frc.*;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-//josh was here :-)
 public class Robot extends IterativeRobot implements PIDOutput {
 
     private AHRS sensor; //the sensor pulling data from the robot
@@ -25,7 +24,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Joystick controller;
     private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered, autonomousEnabled;
     private Thread reader;
-    private final double MIN_ROTATIONSPEED = 0.41;
+    private final double MIN_ROTATIONSPEED = 0.43;
     private double driveSpeed, rotation;
     private Spark motorTest;
     private Compressor compressor;
@@ -47,7 +46,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         //Variable Settings
         pid.setOutputRange(-0.75,0.75);
-        pid.setInputRange(-160, 160);
+        pid.setInputRange(-1080, 1080);
         pid.setAbsoluteTolerance(1); //min. degree that pid can read. If it's within 1 degree, returns pid.onTarget() as true
 
         /*
@@ -101,9 +100,10 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void testInit() {
         autonomousEnabled = true;
+        sensor.reset();
         for(int i = 1; i < 5; i++) {
-            turnAngle(90, 2);
-            System.out.println(sensor.getAngle());
+            turnAngle(-45*i, 2);
+            System.out.println(sensor.getAngle() + " " + pid.getSetpoint());
         }
     }
 
@@ -131,10 +131,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
             case 1:
                 if (plateColors.charAt(0) == 'L') {
                     System.out.println("drive to left side of switch past auto line, place power cube on");
-                } else if (plateColors.charAt(1) == 'L') {
-                    System.out.println("drive to left side of scale, place power cube on");
                 } else {
-                    System.out.println("drive to right side of scale, place power cube on");
+                    System.out.println("drive to right side of switch past auto line, place power cube on");
                 }
 
                 break;
@@ -151,10 +149,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
             case 3:
                 if (plateColors.charAt(0) == 'R') {
                     System.out.println("drive to right side of switch past auto line, place power cube on");
-                } else if (plateColors.charAt(1) == 'R') {
-                    System.out.println("drive to right side of the scale, place power cube on");
                 } else {
-                    System.out.println("drive to left side of the scale, place power cube on");
+                    System.out.println("drive to left side of switch past auto line, place power cube on");
                 }
 
                 break;
@@ -226,8 +222,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private void turnAngle(double angle, double timeout) {
 
         double lastTime = System.currentTimeMillis()/1000, deltaTime, totalTime = 0; //Time delay for 2 seconds
-
-        sensor.reset();
         pid.enable();
         pid.setSetpoint(angle);
 
@@ -236,6 +230,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
             deltaTime = System.currentTimeMillis()/1000 - lastTime;
             lastTime = System.currentTimeMillis()/1000;
             totalTime += deltaTime;
+            System.out.println(sensor.getAngle());
         }
 
         pid.disable();
