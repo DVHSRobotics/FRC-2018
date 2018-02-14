@@ -40,9 +40,9 @@ public class Robot extends IterativeRobot implements PIDOutput {
         sensor = new AHRS(I2C.Port.kMXP);
         pid = new PIDController(kP, kI, kD, kF, sensor, this);
         encoder = new Encoder(0,1);
-        myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
+        myRobot = new DifferentialDrive(new Spark(0), new Spark(2));
         controller = new Joystick(0);
-        arduino = new SerialPort(9600, SerialPort.Port.kUSB);
+        //arduino = new SerialPort(9600, SerialPort.Port.kUSB);
 
 
         //Variable Settings
@@ -89,8 +89,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     @Override
     public void teleopPeriodic() {
-        distance = arduino.read(arduino.getBytesReceived());
-        System.out.println(distance[0]);
+      //  distance = arduino.read(arduino.getBytesReceived());
+       // System.out.println(distance[0]);
         motorController();
         driveControl();
         //pistonControl();
@@ -110,7 +110,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     @Override
     public void disabledInit() {
-        disableAuto();
+        //disableAuto();
     }
 
     private void liveWindow() {
@@ -193,7 +193,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         if (arcadeDrive)
             myRobot.arcadeDrive(-controller.getX(), controller.getRawAxis(3)*driveSpeed);
         else
-            myRobot.tankDrive(-1 * controller.getY() * driveSpeed, -1 * controller.getX() * driveSpeed);
+            myRobot.tankDrive( controller.getX() * driveSpeed,  controller.getY() * driveSpeed);
 
     }
 
@@ -214,10 +214,10 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     }
 
-    private void disableAuto() {
+    /*private void disableAuto() {
         if(autonomousEnabled)
             autonomousEnabled = !autonomousEnabled;
-    }
+    }*/
 
     private void turnAngle(double angle, double timeout) {
 
