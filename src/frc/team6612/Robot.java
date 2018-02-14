@@ -18,7 +18,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private AHRS sensor; //the sensor pulling data from the robot
     private PIDController pid; //does calculations to make accurate turns
     private Encoder encoder; //wheel
-    private DigitalInput arduino;
+    private SerialPort arduino;
 
     private DifferentialDrive myRobot; //"tank drive"
     private Joystick controller;
@@ -30,6 +30,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2; //pneumatic control for cube launch
     private double kP = 0.025, kI = 0.0, kD = 0.1, kF = 0;
+    private byte[] distance;
 
     @Override
     public void robotInit() {
@@ -41,7 +42,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         encoder = new Encoder(0,1);
         myRobot = new DifferentialDrive(new Spark(0), new Spark(1));
         controller = new Joystick(0);
-        arduino = new DigitalInput(9);
+        arduino = new SerialPort(9600, SerialPort.Port.kUSB);
 
 
         //Variable Settings
@@ -88,8 +89,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     @Override
     public void teleopPeriodic() {
-
-        System.out.println(arduino.get());
+        distance = arduino.read(arduino.getBytesReceived());
+        System.out.println(distance[0]);
         motorController();
         driveControl();
         //pistonControl();
@@ -165,8 +166,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void pistonControl() {
 
-        compressAir = controller.getRawButton(5);
-        compressor.setClosedLoopControl(compressAir);
+        compressor.setClosedLoopControl(true);
 
         soleOnePowered = controller.getRawButton(6);
         soleTwoPowered = controller.getRawButton(7);
