@@ -49,7 +49,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
 
         //Variable Settings
-        pid.setOutputRange(-0.5, 0.5);
+        pid.setOutputRange(-0.6, 0.6);
         pid.setInputRange(-1080, 1080);
         pid.setAbsoluteTolerance(1); //min. degree that pid can read. If it's within 1 degree, returns pid.onTarget() as true
 
@@ -127,7 +127,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         autonomousEnabled = true;
         sensor.reset();
-        turnAngle(270, 60);
+        turnAngle(90, 60);
         System.out.println(sensor.getAngle() + " " + pid.getSetpoint());
     }
 
@@ -253,7 +253,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         pid.enable();
         pid.setSetpoint(angle);
 
-        while((!pid.onTarget() || Math.abs(rotation) > 4) && totalTime < timeout && autonomousEnabled) {
+        while((!pid.onTarget() || Math.abs(rotation) > 0.42) && totalTime < timeout && autonomousEnabled) {
             myRobot.arcadeDrive(0, rotation);
             deltaTime = System.currentTimeMillis()/1000 - lastTime;
             lastTime = System.currentTimeMillis()/1000;
