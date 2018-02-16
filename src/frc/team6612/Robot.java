@@ -13,6 +13,8 @@ import com.kauailabs.navx.frc.*;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
+import java.util.Arrays;
+
 public class Robot extends IterativeRobot implements PIDOutput {
 
     private AHRS sensor; //the sensor pulling data from the robot
@@ -26,7 +28,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Thread reader;
     private final double MIN_ROTATIONSPEED = 0.38;
     private double driveSpeed, rotation;
-    private Spark motorTest;
+    private Spark winch;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2; //pneumatic control for cube launch
     private double kP = 0.045, kI = 0.0, kD = 0.1, kF = 0;
@@ -38,14 +40,14 @@ public class Robot extends IterativeRobot implements PIDOutput {
     public void robotInit() {
 
         //Objects Initialization :-)
-        motorTest = new Spark(3);
+        winch = new Spark(1);
         sensor = new AHRS(I2C.Port.kMXP);
         pid = new PIDController(kP, kI, kD, kF, sensor, this);
         lEncoder = new Encoder(4,5);
         rEncoder = new Encoder(2, 3);
         myRobot = new DifferentialDrive(new Spark(0), new Spark(2));
         controller = new Joystick(0);
-        //arduino = new SerialPort(9600, SerialPort.Port.kUSB);
+        arduino = new SerialPort(115200, SerialPort.Port.kUSB);
 
 
         //Variable Settings
@@ -86,7 +88,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void teleopInit() {
 
-        motorTest.setSafetyEnabled(false);
+        winch.setSafetyEnabled(false);
         lEncoder.reset();
         rEncoder.reset();
 
@@ -94,11 +96,11 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     @Override
     public void teleopPeriodic() {
-      //  distance = arduino.read(arduino.getBytesReceived());
-       // System.out.println(distance[0]);
+
+        //System.out.println(new String(arduino.read(arduino.getBytesReceived())));
         motorController();
         driveControl();
-        System.out.println(lEncoder.getDistance() + " " + rEncoder.getDistance());
+        //System.out.println(lEncoder.getDistance() + " " + rEncoder.getDistance());
         //pistonControl();
         //Methods for Forklift, Claw
 
@@ -226,7 +228,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void motorController() {
 
-        motorTest.setSpeed(controller.getRawAxis(5));
+        winch.setSpeed(controller.getRawAxis(5));
 
     }
 
