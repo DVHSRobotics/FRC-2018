@@ -26,13 +26,15 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Joystick controller;
     private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered, autonomousEnabled;
     private Thread reader;
-    private final double MIN_ROTATIONSPEED = 0.38;
+    private final double MIN_ROTATIONSPEED = 0.4;
     private double driveSpeed, rotation;
     private Spark winch;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2; //pneumatic control for cube launch
-    private double kP = 0.045, kI = 0.0, kD = 0.1, kF = 0;
-    //Old Robot Constants: .025, 0, 0.1, 0
+    private double kP = 0.05, kI = 0.0, kD = 0.1, kF = 0;
+
+    //.045 0 .1 0
+    //Old Robot PID Constants: .025, 0, 0.1, 0
     private byte[] distance;
     private final double INCHES_PER_ENCODER_PULSE = 0.942477796;
 
@@ -47,22 +49,20 @@ public class Robot extends IterativeRobot implements PIDOutput {
         rEncoder = new Encoder(2, 3);
         myRobot = new DifferentialDrive(new Spark(0), new Spark(2));
         controller = new Joystick(0);
-        arduino = new SerialPort(115200, SerialPort.Port.kUSB);
+        compressor = new Compressor(0);
+        solenoid1 = new Solenoid(0);
+        solenoid2 = new Solenoid(1);
+        //arduino = new SerialPort(115200, SerialPort.Port.kUSB);
 
 
         //Variable Settings
-        pid.setOutputRange(-0.6, 0.6);
+        pid.setOutputRange(-0.5, 0.5);
         pid.setInputRange(-1080, 1080);
-        pid.setAbsoluteTolerance(1); //min. degree that pid can read. If it's within 1 degree, returns pid.onTarget() as true
+        pid.setAbsoluteTolerance(1); //min. degree that pid can read. If it's within (1) degree, returns pid.onTarget() as true
+        compressor.setClosedLoopControl(true); //compressor auto-regulates its pressure
 
-        /*
-        compressor = new Compressor(0);
-        solenoid1 = new Solenoid(0);
-        solenoid2 = new Solenoid (1);
-        */
 
         liveWindow();
-
 
     }
 
@@ -101,7 +101,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         motorController();
         driveControl();
         //System.out.println(lEncoder.getDistance() + " " + rEncoder.getDistance());
-        //pistonControl();
+        pistonControl();
         //Methods for Forklift, Claw
 
 
@@ -195,10 +195,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void pistonControl() {
 
-        compressor.setClosedLoopControl(true);
-
-        soleOnePowered = controller.getRawButton(6);
-        soleTwoPowered = controller.getRawButton(7);
+        soleOnePowered = controller.getRawButton(7);
+        soleTwoPowered = controller.getRawButton(8);
 
         solenoid1.set(soleOnePowered);
         solenoid2.set(soleTwoPowered);
