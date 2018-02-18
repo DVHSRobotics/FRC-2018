@@ -54,7 +54,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         compressor = new Compressor(0);
         solenoid1 = new Solenoid(0);
         solenoid2 = new Solenoid(1);
-        arduino = new I2C(I2C.Port.kOnboard,0);
+        arduino = new I2C(I2C.Port.kOnboard,8);
 
 
         //Variable Settings
@@ -305,6 +305,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     }
     void printDistance(){
+        //System.out.println();
         arduino.read(8,1,distance);
         System.out.println(distance[0]);
     }
