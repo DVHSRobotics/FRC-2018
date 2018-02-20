@@ -142,9 +142,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         */
 
         for(int i = 1; i < 10; i++) {
-            /* System.out.println("Driving...");
-            driveDistance(24); */
-            System.out.println("Turning...");
+            driveDistance(24);
             turnAngle(45, 2);
         }
 
