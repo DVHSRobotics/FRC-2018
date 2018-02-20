@@ -27,8 +27,9 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Joystick controller;
     private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered, autonomousEnabled;
     private Thread reader;
-    private final double MIN_ROTATIONSPEED = 0.4;
+    private final double MIN_ROTATIONSPEED = 0.4, MIN_DRIVESPEED = 0.48;
     private double driveSpeed, rotation;
+    private double lastTime, deltaTime, totalTime;
     private Spark winch;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2; //pneumatic control for cube launch
@@ -60,7 +61,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         //Variable Settings
         pid.setOutputRange(-0.45, 0.45);
         pid.setInputRange(-1080, 1080);
-        pid.setAbsoluteTolerance(1); //min. degree that pid can read. If it's within (1) degree, returns pid.onTarget() as true
+        pid.setAbsoluteTolerance(0.5); //min. degree that pid can read. If it's within (1) degree, returns pid.onTarget() as true
         compressor.setClosedLoopControl(true); //compressor auto-regulates its pressure
 
 
@@ -113,6 +114,10 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void testInit() {
 
+        autonomousEnabled = true;
+        sensor.reset();
+        pid.reset();
+
         /*lEncoder.reset();
         rEncoder.reset();
         myRobot.arcadeDrive(0.6, 0);
@@ -130,13 +135,18 @@ public class Robot extends IterativeRobot implements PIDOutput {
         myRobot.arcadeDrive(0, 0);
 
 
-        autonomousEnabled = true;
+
         sensor.reset();
         turnAngle(90, 2);
         System.out.println(sensor.getAngle() + " " + pid.getSetpoint());
         */
 
-        driveDistance(24);
+        for(int i = 1; i < 10; i++) {
+            /* System.out.println("Driving...");
+            driveDistance(24); */
+            System.out.println("Turning...");
+            turnAngle(45, 2);
+        }
 
     }
 
@@ -213,25 +223,32 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void driveDistance(float distanceInches) {
 
+        lEncoder.reset();
+        rEncoder.reset();
+
         double currentDistance = 0;
         double speed = 0;
         double adjustedSpeed = 0;
 
-        while(currentDistance < distanceInches) {
+        while((currentDistance < distanceInches) && autonomousEnabled) {
 
             if(lEncoder.getDistance() <= rEncoder.getDistance()) {
-                currentDistance = rEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
                 speed = (distanceInches - currentDistance) / distanceInches;
+                currentDistance = rEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
+
             }
             else {
-                currentDistance = lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
                 speed = (distanceInches - currentDistance) / distanceInches;
+                currentDistance = lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
+
             }
 
+            if(speed > 0.7) speed = 0.7;
+
             if(speed > 0)
-                adjustedSpeed = speed + MIN_ROTATIONSPEED - (speed * MIN_ROTATIONSPEED);
+                adjustedSpeed = speed + MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
             else
-                adjustedSpeed = speed - MIN_ROTATIONSPEED - (speed * MIN_ROTATIONSPEED);
+                adjustedSpeed = speed - MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
 
             myRobot.arcadeDrive(adjustedSpeed, 0);
 
@@ -289,17 +306,23 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void turnAngle(double angle, double timeout) {
 
-        double lastTime = System.currentTimeMillis()/1000, deltaTime, totalTime = 0; //Time delay for 2 seconds
+        sensor.reset();
+        lastTime = System.currentTimeMillis()/1000;
+        deltaTime = 0;
+        totalTime = 0; //Time delay for 2 seconds
+
         pid.enable();
         pid.setSetpoint(angle);
 
-        while((!pid.onTarget() || Math.abs(rotation) > 0.42) && totalTime < timeout && autonomousEnabled) {
+        while(!(pid.onTarget() && Math.abs(rotation) < MIN_ROTATIONSPEED) && totalTime < timeout && autonomousEnabled) {
             myRobot.arcadeDrive(0, rotation);
             deltaTime = System.currentTimeMillis()/1000 - lastTime;
             lastTime = System.currentTimeMillis()/1000;
             totalTime += deltaTime;
-            System.out.println(rotation + " " + sensor.getAngle());
+
         }
+
+        System.out.println(rotation + " " + sensor.getAngle());
 
         pid.disable();
 
