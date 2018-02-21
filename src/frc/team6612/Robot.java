@@ -20,20 +20,22 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private AHRS sensor; //the sensor pulling data from the robot
     private PIDController pid; //does calculations to make accurate turns
-    private Encoder lEncoder, rEncoder; //wheel
+    private Encoder lEncoder, rEncoder, winchEncoder; //wheel
     private I2C arduino;
 
     private DifferentialDrive myRobot; //"tank drive"
     private Joystick controller;
-    private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered, autonomousEnabled;
+    private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered, soleThreePowered, soleFourPowered,autonomousEnabled;
     private Thread reader;
     private final double MIN_ROTATIONSPEED = 0.4, MIN_DRIVESPEED = 0.48;
     private double driveSpeed, rotation;
     private double lastTime, deltaTime, totalTime;
     private Spark winch;
     private Compressor compressor;
-    private Solenoid solenoid1, solenoid2; //pneumatic control for cube launch
+    private Solenoid solenoid1, solenoid2, solenoid3, solenoid4; //pneumatic control for cube launch
     private double kP = 0.045, kI = 0.0, kD = 0.1, kF = 0;
+    private int switchEncoderTicks= -4174;
+    private int scaleEncoderTicks=switchEncoderTicks-6704;//DRIVE THE WINCH WITH NEGATIVE SPEED
 
     //.045 0 .1 0
     //Old Robot PID Constants: .025, 0, 0.1, 0
@@ -50,11 +52,14 @@ public class Robot extends IterativeRobot implements PIDOutput {
         pid = new PIDController(kP, kI, kD, kF, sensor, this);
         lEncoder = new Encoder(4,5);
         rEncoder = new Encoder(2, 3);
+        winchEncoder = new Encoder(0,1);
         myRobot = new DifferentialDrive(new Spark(0), new Spark(2));
         controller = new Joystick(0);
         compressor = new Compressor(0);
         solenoid1 = new Solenoid(0);
         solenoid2 = new Solenoid(1);
+        solenoid3 = new Solenoid(2);
+        solenoid4 = new Solenoid(3);
         arduino = new I2C(I2C.Port.kOnboard,8);
 
 
@@ -104,6 +109,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         motorController();
         driveControl();
         //System.out.println(lEncoder.getDistance() + " " + rEncoder.getDistance());
+        System.out.println(winchEncoder.get());
         pistonControl();
         //Methods for Forklift, Claw
         printDistance();
@@ -143,7 +149,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         for(int i = 1; i < 10; i++) {
             driveDistance(24);
-            turnAngle(45, 2);
+            turnAngle(90, 2);
         }
 
     }
@@ -213,9 +219,13 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         soleOnePowered = controller.getRawButton(7);
         soleTwoPowered = controller.getRawButton(8);
+        soleThreePowered = controller.getRawButton(5);
+        soleFourPowered = controller.getRawButton(6);
 
         solenoid1.set(soleOnePowered);
         solenoid2.set(soleTwoPowered);
+        solenoid3.set(soleThreePowered);
+        solenoid4.set(soleFourPowered);
 
     }
 
@@ -328,7 +338,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     void printDistance(){
         //System.out.println();
         arduino.read(8,1,distance);
-        System.out.println(distance[0]);
+        //System.out.println(distance[0]);
     }
 
 }
