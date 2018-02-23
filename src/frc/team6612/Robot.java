@@ -33,12 +33,12 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Spark winch;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2, solenoid3, solenoid4; //pneumatic control for cube launch
-    private double kP = 0.045, kI = 0.0, kD = 0.1, kF = 0;
-    private int switchEncoderTicks= -4174;
-    private int scaleEncoderTicks=switchEncoderTicks-6704;//DRIVE THE WINCH WITH NEGATIVE SPEED
+    private double kP = 0.045, kI = 0.0, kD = 0.085, kF = 0;
+    private int switchEncoderTicks= -2000; //~1'11"
+    private int scaleEncoderTicks=-10500;// ~6'11"
 
-    //.045 0 .1 0
-    //Old Robot PID Constants: .025, 0, 0.1, 0
+    //Competition Robot PID Constants:  0.045, 0, 0.1, 0
+    //Old Robot PID Constants:          0.025, 0, 0.1, 0
     private byte[] distance;
     private final float INCHES_PER_ENCODER_PULSE = 0.942477796f / 10.75f;
 
@@ -61,6 +61,14 @@ public class Robot extends IterativeRobot implements PIDOutput {
         solenoid3 = new Solenoid(2);
         solenoid4 = new Solenoid(3);
         arduino = new I2C(I2C.Port.kOnboard,8);
+
+        /*
+        *   When zeroed at floor, maximum values:
+        *
+        *   Switch Height: -3594
+        *   Scale Height:
+        *
+        */
 
 
         //Variable Settings
@@ -97,8 +105,11 @@ public class Robot extends IterativeRobot implements PIDOutput {
     public void teleopInit() {
 
         winch.setSafetyEnabled(false);
+        myRobot.setSafetyEnabled(false);
         lEncoder.reset();
         rEncoder.reset();
+        //winchEncoder.reset();
+        //raiseToHeight(switchEncoderTicks);
 
     }
 
@@ -107,12 +118,12 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
 
         motorController();
-        driveControl();
+        //driveControl();
         //System.out.println(lEncoder.getDistance() + " " + rEncoder.getDistance());
         System.out.println(winchEncoder.get());
-        pistonControl();
+        //pistonControl();
         //Methods for Forklift, Claw
-        printDistance();
+        //printDistance();
 
 
     }
@@ -147,15 +158,23 @@ public class Robot extends IterativeRobot implements PIDOutput {
         System.out.println(sensor.getAngle() + " " + pid.getSetpoint());
         */
 
+        /*
         for(int i = 1; i < 10; i++) {
-            driveDistance(24);
-            turnAngle(90, 2);
+           // driveDistance(24);
+            turnAngle(90, 60);
         }
+        */
 
     }
 
     @Override
     public void testPeriodic() {
+
+        if(controller.getRawButton(9))
+            turnAngle(-90,2);
+        else
+            myRobot.arcadeDrive(0,0);
+
     }
 
     @Override
@@ -229,6 +248,18 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     }
 
+    private void raiseToHeight(int pulses) {
+        if(winchEncoder.get() < pulses) {
+            winch.setSpeed(0.25);
+        } else {
+            winch.setSpeed(-0.25);
+        }
+        while(winchEncoder.get() != pulses) {
+            System.out.println(winchEncoder.get());
+        }
+        winch.setSpeed(0);
+    }
+
     private void driveDistance(float distanceInches) {
 
         lEncoder.reset();
@@ -290,6 +321,11 @@ public class Robot extends IterativeRobot implements PIDOutput {
     }
 
     private void motorController() {
+
+        //TEMP ZEROING
+        if(controller.getRawButton(3)) {
+            winchEncoder.reset();
+        }
 
         winch.setSpeed(controller.getRawAxis(5));
 
