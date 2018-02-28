@@ -10,11 +10,8 @@ package frc.team6612;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import com.kauailabs.navx.frc.*;
-import edu.wpi.first.wpilibj.hal.I2CJNI;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-
-import java.util.Arrays;
 
 public class Robot extends IterativeRobot implements PIDOutput {
 
@@ -37,7 +34,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private int switchEncoderTicks= 2000; //~1'11"
     private int scaleEncoderTicks=10500;// ~6'11"
 
-    //Competition Robot PID Constants:  0.045, 0, 0.1, 0
+    //Competition Robot PID Constants:  0.045, 0, 0.085, 0
     //Old Robot PID Constants:          0.025, 0, 0.1, 0
     private byte[] distance;
     private final float INCHES_PER_ENCODER_PULSE = 0.942477796f / 10.75f;
@@ -62,21 +59,11 @@ public class Robot extends IterativeRobot implements PIDOutput {
         solenoid4 = new Solenoid(3);
         arduino = new I2C(I2C.Port.kOnboard,8);
 
-        /*
-        *   When zeroed at floor, maximum values:
-        *
-        *   Switch Height: -3594
-        *   Scale Height:
-        *
-        */
-
-
         //Variable Settings
         pid.setOutputRange(-0.45, 0.45);
         pid.setInputRange(-1080, 1080);
         pid.setAbsoluteTolerance(0.5); //min. degree that pid can read. If it's within (1) degree, returns pid.onTarget() as true
         compressor.setClosedLoopControl(true); //compressor auto-regulates its pressure
-
 
         liveWindow();
 
@@ -86,18 +73,11 @@ public class Robot extends IterativeRobot implements PIDOutput {
     public void autonomousInit() {
 
         moveToPosition();
-        fireCube();
-
 
     }
 
     @Override
     public void autonomousPeriodic() {
-
-        //myRobot.arcadeDrive(0, rotation);
-
-        //rotation is set in PIDWrite
-        //because the robot is passed in pid constructor as output
 
     }
 
@@ -108,7 +88,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
         myRobot.setSafetyEnabled(false);
         lEncoder.reset();
         rEncoder.reset();
-        //winchEncoder.reset();
         winch.setSpeed(0);
 
     }
@@ -116,14 +95,10 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void teleopPeriodic() {
 
-        motorController();
+        winchController();
         driveControl();
-        //System.out.println(lEncoder.getDistance() + " " + rEncoder.getDistance());
-        //System.out.println(winchEncoder.get());
-        //pistonControl();
-        //Methods for Forklift, Claw
-        //printDistance();
-
+        pistonControl();
+        readDistance();
 
     }
 
@@ -134,60 +109,28 @@ public class Robot extends IterativeRobot implements PIDOutput {
         sensor.reset();
         pid.reset();
 
-        /*lEncoder.reset();
-        rEncoder.reset();
-        myRobot.arcadeDrive(0.6, 0);
-
-        Thread t = new Thread(() -> {
-            while(!Thread.interrupted()) {
-                System.out.println(lEncoder.getDistance() + " " + rEncoder.getDistance());
-                Timer.delay(1);
-            }
-        });
-
-        t.start();
-
-        Timer.delay(3);
-        myRobot.arcadeDrive(0, 0);
-
-
-
-        sensor.reset();
-        turnAngle(90, 2);
-        System.out.println(sensor.getAngle() + " " + pid.getSetpoint());
-        */
-
-        /*
-        for(int i = 1; i < 10; i++) {
-           // driveDistance(24);
-            turnAngle(90, 60);
-        }
-        */
-
     }
 
     @Override
     public void testPeriodic() {
 
-        /*if(controller.getRawButton(9))
-            turnAngle(-90,2);
-        else
-            myRobot.arcadeDrive(0,0);
-        */
-
         winch.setSpeed(controller.getRawAxis(5));
-
 
     }
 
     @Override
     public void disabledInit() {
+
         disableAuto();
+
     }
 
     private void liveWindow() {
 
+        //reports values into the SmartDashboard application as a LiveWindow, which can be adjusted in Test mode.
         LiveWindow.addActuator("Turning", "PID", pid);
+
+        //reports values into the SmartDashboard application
         SmartDashboard.putNumber("Minimum Speed", MIN_ROTATIONSPEED);
         SmartDashboard.putNumber("Rotation Speed", rotation);
 
@@ -204,7 +147,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
             case 1:
                 if (plateColors.charAt(0) == 'L') {
                     System.out.println("drive to left side of switch past auto line, place power cube on");
-                    //start on leftmost side of diamond plate, drive 168 inches forward (middle switch
                 } else {
                     System.out.println("drive to right side of switch past auto line, place power cube on");
                 }
@@ -229,12 +171,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
                 break;
         }
-
-    }
-
-    private void fireCube(){
-        //placeholder
-        //Using back launch mechanism
     }
 
     private void pistonControl() {
@@ -252,13 +188,17 @@ public class Robot extends IterativeRobot implements PIDOutput {
     }
 
     private void raiseToHeight(int pulses) {
-        if( winchEncoder.get() < pulses)
-            winch.setSpeed(0.4);
+
+        if (winchEncoder.get() < pulses - 5 || winchEncoder.get() > pulses + 5) {
+
+            if (winchEncoder.get() < pulses)
+                winch.setSpeed(0.4);
+            else
+                winch.setSpeed(-0.4);
+
+        }
         else
-            winch.setSpeed(-0.4);
-        while(winchEncoder.get() < pulses - 3 || winchEncoder.get() > pulses + 3);
-        System.out.println(winchEncoder.get());
-        winch.setSpeed(0);
+            winch.setSpeed(0);
     }
 
     private void driveDistance(float distanceInches) {
@@ -321,9 +261,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     }
 
-    private void motorController() {
-
-        System.out.println(winchEncoder.get());
+    private void winchController() {
 
         //TEMP ZEROING
         if(controller.getRawButton(3))
@@ -334,8 +272,10 @@ public class Robot extends IterativeRobot implements PIDOutput {
             raiseToHeight(switchEncoderTicks);
         else if(controller.getRawButton(9))
             raiseToHeight(scaleEncoderTicks);
+        else
+            raiseToHeight(0);
 
-        winch.setSpeed(controller.getRawAxis(5));
+        //winch.setSpeed(controller.getRawAxis(5));
 
     }
 
@@ -379,10 +319,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         pid.disable();
 
     }
-    void printDistance(){
-        //System.out.println();
+    private void readDistance(){
         arduino.read(8,1,distance);
-        //System.out.println(distance[0]);
     }
-
 }
