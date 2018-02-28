@@ -34,8 +34,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2, solenoid3, solenoid4; //pneumatic control for cube launch
     private double kP = 0.045, kI = 0.0, kD = 0.085, kF = 0;
-    private int switchEncoderTicks= -2000; //~1'11"
-    private int scaleEncoderTicks=-10500;// ~6'11"
+    private int switchEncoderTicks= 2000; //~1'11"
+    private int scaleEncoderTicks=10500;// ~6'11"
 
     //Competition Robot PID Constants:  0.045, 0, 0.1, 0
     //Old Robot PID Constants:          0.025, 0, 0.1, 0
@@ -109,18 +109,17 @@ public class Robot extends IterativeRobot implements PIDOutput {
         lEncoder.reset();
         rEncoder.reset();
         //winchEncoder.reset();
-        //raiseToHeight(switchEncoderTicks);
+        winch.setSpeed(0);
 
     }
 
     @Override
     public void teleopPeriodic() {
 
-
         motorController();
-        //driveControl();
+        driveControl();
         //System.out.println(lEncoder.getDistance() + " " + rEncoder.getDistance());
-        System.out.println(winchEncoder.get());
+        //System.out.println(winchEncoder.get());
         //pistonControl();
         //Methods for Forklift, Claw
         //printDistance();
@@ -170,10 +169,14 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void testPeriodic() {
 
-        if(controller.getRawButton(9))
+        /*if(controller.getRawButton(9))
             turnAngle(-90,2);
         else
             myRobot.arcadeDrive(0,0);
+        */
+
+        winch.setSpeed(controller.getRawAxis(5));
+
 
     }
 
@@ -249,14 +252,12 @@ public class Robot extends IterativeRobot implements PIDOutput {
     }
 
     private void raiseToHeight(int pulses) {
-        if(winchEncoder.get() < pulses) {
-            winch.setSpeed(0.25);
-        } else {
-            winch.setSpeed(-0.25);
-        }
-        while(winchEncoder.get() != pulses) {
-            System.out.println(winchEncoder.get());
-        }
+        if( winchEncoder.get() < pulses)
+            winch.setSpeed(0.4);
+        else
+            winch.setSpeed(-0.4);
+        while(winchEncoder.get() < pulses - 3 || winchEncoder.get() > pulses + 3);
+        System.out.println(winchEncoder.get());
         winch.setSpeed(0);
     }
 
@@ -322,10 +323,17 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void motorController() {
 
+        System.out.println(winchEncoder.get());
+
         //TEMP ZEROING
-        if(controller.getRawButton(3)) {
+        if(controller.getRawButton(3))
             winchEncoder.reset();
-        }
+
+        // Raising and lowering claw to set waypoints
+        if(controller.getRawButton(8))
+            raiseToHeight(switchEncoderTicks);
+        else if(controller.getRawButton(9))
+            raiseToHeight(scaleEncoderTicks);
 
         winch.setSpeed(controller.getRawAxis(5));
 
