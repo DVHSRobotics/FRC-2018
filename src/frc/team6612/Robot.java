@@ -27,12 +27,12 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private final double MIN_ROTATIONSPEED = 0.4, MIN_DRIVESPEED = 0.48;
     private double driveSpeed, rotation;
     private double lastTime, deltaTime, totalTime;
-    private Spark winch;
+    private Spark winch, ledStrip;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2, solenoid3, solenoid4; //pneumatic control for cube launch
     private double kP = 0.045, kI = 0.0, kD = 0.085, kF = 0;
     private int switchEncoderTicks= 2000; //~1'11"
-    private int scaleEncoderTicks=10500;// ~6'11"
+    private int scaleEncoderTicks=10200;// ~6'11"
 
     //Competition Robot PID Constants:  0.045, 0, 0.085, 0
     //Old Robot PID Constants:          0.025, 0, 0.1, 0
@@ -42,9 +42,10 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void robotInit() {
 
-        //Objects Initialization :-)
+        // Objects Initialization :-)
         distance = new byte[32];
         winch = new Spark(1);
+        ledStrip = new Spark(3);
         sensor = new AHRS(I2C.Port.kMXP);
         pid = new PIDController(kP, kI, kD, kF, sensor, this);
         lEncoder = new Encoder(4,5);
@@ -62,22 +63,27 @@ public class Robot extends IterativeRobot implements PIDOutput {
         //Variable Settings
         pid.setOutputRange(-0.45, 0.45);
         pid.setInputRange(-1080, 1080);
-        pid.setAbsoluteTolerance(0.5); //min. degree that pid can read. If it's within (1) degree, returns pid.onTarget() as true
-        compressor.setClosedLoopControl(true); //compressor auto-regulates its pressure
+        pid.setAbsoluteTolerance(0.5); // Min. degree that pid can read. If it's within (0.5) degrees, returns pid.onTarget() as true
+        compressor.setClosedLoopControl(true); // Compressor auto-regulates its pressure
 
         liveWindow();
+
+        //LED Controls
+        ledStrip.set(-0.97);
 
     }
 
     @Override
     public void autonomousInit() {
-
+        
+        driveDistance(12);
         moveToPosition();
 
     }
 
     @Override
     public void autonomousPeriodic() {
+
 
     }
 
@@ -115,6 +121,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
     public void testPeriodic() {
 
         winch.setSpeed(controller.getRawAxis(5));
+        if(controller.getRawButton(3))
+            winchEncoder.reset();
 
     }
 
@@ -175,28 +183,26 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void pistonControl() {
 
-        soleOnePowered = controller.getRawButton(7);
-        soleTwoPowered = controller.getRawButton(8);
-        soleThreePowered = controller.getRawButton(5);
-        soleFourPowered = controller.getRawButton(6);
-
+        // Claw
+        soleOnePowered = controller.getRawButton(11);
+        soleTwoPowered = controller.getRawButton(12);
         solenoid1.set(soleOnePowered);
         solenoid2.set(soleTwoPowered);
+
+        // Back launch mechanism
+        /* soleThreePowered = controller.getRawButton(3);
+        soleFourPowered = controller.getRawButton(4);
         solenoid3.set(soleThreePowered);
-        solenoid4.set(soleFourPowered);
+        solenoid4.set(soleFourPowered); */
 
     }
 
     private void raiseToHeight(int pulses) {
 
-        if (winchEncoder.get() < pulses - 5 || winchEncoder.get() > pulses + 5) {
-
-            if (winchEncoder.get() < pulses)
-                winch.setSpeed(0.4);
-            else
-                winch.setSpeed(-0.4);
-
-        }
+        if (winchEncoder.get() < pulses - 5)
+            winch.setSpeed(0.4);
+        else if(winchEncoder.get() > pulses + 5)
+            winch.setSpeed(-0.4);
         else
             winch.setSpeed(0);
     }
@@ -210,7 +216,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         double speed = 0;
         double adjustedSpeed = 0;
 
-        while((currentDistance < distanceInches) && autonomousEnabled) {
+        while(currentDistance < distanceInches) {
 
             if(lEncoder.getDistance() <= rEncoder.getDistance()) {
                 speed = (distanceInches - currentDistance) / distanceInches;
@@ -223,7 +229,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
             }
 
-            if(speed > 0.7) speed = 0.7;
+            if(speed > 0.7)
+                speed = 0.7;
 
             if(speed > 0)
                 adjustedSpeed = speed + MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
@@ -234,8 +241,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         }
 
-
-
         myRobot.arcadeDrive(0,0);
 
     }
@@ -243,16 +248,17 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private void driveControl() {
 
         //Prints if arcadeDrive is enabled/disabled
-        if (arcadeDrive != controller.getRawButton(4)) {
+        /*if (arcadeDrive != controller.getRawButton(4)) {
             arcadeDrive = controller.getRawButton(4); //enable/disable
             if (arcadeDrive)
                 System.out.println("Arcade drive is active!");
             else
                 System.out.println("Arcade drive is inactive!");
 
-        }
+        }*/
 
         driveSpeed = 1;
+        arcadeDrive = false;
         //if arcadeDrive is true, set drive method to arcade drive; else, tank drive
         if (arcadeDrive)
             myRobot.arcadeDrive(-controller.getX(), controller.getRawAxis(3)*driveSpeed);
@@ -263,19 +269,24 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void winchController() {
 
-        //TEMP ZEROING
-        if(controller.getRawButton(3))
+        // Control scheme
+        if(controller.getRawButton(6)) {
+
+            winch.setSpeed(controller.getRawAxis(5));
+
+        } else if (controller.getRawButton(5)) {
+
+            if (controller.getRawButton(9))
+                raiseToHeight(switchEncoderTicks);
+            else if (controller.getRawButton(10))
+                raiseToHeight(scaleEncoderTicks);
+            else if (controller.getRawButton(8))
+                raiseToHeight(0);
+
+        } else if(controller.getRawButton(7))
+
             winchEncoder.reset();
 
-        // Raising and lowering claw to set waypoints
-        if(controller.getRawButton(8))
-            raiseToHeight(switchEncoderTicks);
-        else if(controller.getRawButton(9))
-            raiseToHeight(scaleEncoderTicks);
-        else
-            raiseToHeight(0);
-
-        //winch.setSpeed(controller.getRawAxis(5));
 
     }
 
