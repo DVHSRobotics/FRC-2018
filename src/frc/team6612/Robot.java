@@ -13,6 +13,8 @@ import com.kauailabs.navx.frc.*;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
+import java.text.DecimalFormat;
+
 public class Robot extends IterativeRobot implements PIDOutput {
 
     private AHRS sensor; //the sensor pulling data from the robot
@@ -69,13 +71,13 @@ public class Robot extends IterativeRobot implements PIDOutput {
         liveWindow();
 
         //LED Controls
-        ledStrip.set(-0.97);
+
 
     }
 
     @Override
     public void autonomousInit() {
-        
+
         driveDistance(12);
         moveToPosition();
 
@@ -105,6 +107,11 @@ public class Robot extends IterativeRobot implements PIDOutput {
         driveControl();
         pistonControl();
         readDistance();
+
+
+        ledStrip.set(controller.getRawAxis(4));
+        //ledColor 1 is off
+        //Cool led options: 0.27 heartbeat
 
     }
 
