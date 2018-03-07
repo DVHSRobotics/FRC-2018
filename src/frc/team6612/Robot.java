@@ -35,6 +35,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private double kP = 0.045, kI = 0.0, kD = 0.085, kF = 0;
     private int switchEncoderTicks= 2000; //~1'11"
     private int scaleEncoderTicks=10200;// ~6'11"
+    private double adjustmentConstant = 0.01;//multiplier for distance to determine speed
+    private int minDistanceFromWall = 8;//NEEDS TO BE MEASURED
 
     //Competition Robot PID Constants:  0.045, 0, 0.085, 0
     //Old Robot PID Constants:          0.025, 0, 0.1, 0
@@ -71,15 +73,20 @@ public class Robot extends IterativeRobot implements PIDOutput {
         liveWindow();
 
         //LED Controls
-
+        ledStrip.set(1);
 
     }
 
     @Override
     public void autonomousInit() {
 
-        driveDistance(12);
+
+
+        driveDistance(48);
+        //System.out.println(lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE - currentDistance);
+        //System.out.println(rEncoder.getDistance() * INCHES_PER_ENCODER_PULSE - currentDistance);
         moveToPosition();
+        ledStrip.set(1);
 
     }
 
@@ -216,14 +223,17 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void driveDistance(float distanceInches) {
 
+        //MOMENTUM NEEDS BE ACCOUNTED FOR IN ORDER TO DRIVE ACCURATELY
+
         lEncoder.reset();
         rEncoder.reset();
 
-        double currentDistance = 0;
         double speed = 0;
         double adjustedSpeed = 0;
+        double currentDistance = 0;
+        double time = System.currentTimeMillis();
 
-        while(currentDistance < distanceInches) {
+        while(currentDistance != distanceInches) {
 
             if(lEncoder.getDistance() <= rEncoder.getDistance()) {
                 speed = (distanceInches - currentDistance) / distanceInches;
@@ -337,7 +347,15 @@ public class Robot extends IterativeRobot implements PIDOutput {
         pid.disable();
 
     }
-    private void readDistance(){
+    private int readDistance(){
         arduino.read(8,1,distance);
+        return distance[0];
+    }
+    private void approachWall(){
+        int currentDistance = readDistance();
+        if(currentDistance<=minDistanceFromWall) {
+            currentDistance = readDistance();
+            myRobot.arcadeDrive(currentDistance * adjustmentConstant, 0);
+        }
     }
 }
