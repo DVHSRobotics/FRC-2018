@@ -32,11 +32,13 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Spark winch, ledStrip;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2, solenoid3, solenoid4; //pneumatic control for cube launch
+    private DigitalInput limitSwitch;
     private double kP = 0.045, kI = 0.0, kD = 0.085, kF = 0;
-    private int switchEncoderTicks= 2000; //~1'11"
-    private int scaleEncoderTicks=10200;// ~6'11"
-    private double adjustmentConstant = 0.01;//multiplier for distance to determine speed
-    private int minDistanceFromWall = 8;//NEEDS TO BE MEASURED
+    private final double winchTolerance = 75;
+    private int switchEncoderTicks= 2700; //~1'11"
+    private int scaleEncoderTicks=10400;// ~6'11"
+    private double adjustmentConstant = 0.02;//multiplier for distance to determine speed
+    private int minDistanceFromWall = 8;//NEEDS TO BE MEASURED in cm
 
     //Competition Robot PID Constants:  0.045, 0, 0.085, 0
     //Old Robot PID Constants:          0.025, 0, 0.1, 0
@@ -63,6 +65,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         solenoid3 = new Solenoid(2);
         solenoid4 = new Solenoid(3);
         arduino = new I2C(I2C.Port.kOnboard,8);
+        limitSwitch = new DigitalInput(6);
 
         //Variable Settings
         pid.setOutputRange(-0.45, 0.45);
@@ -73,7 +76,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         liveWindow();
 
         //LED Controls
-        ledStrip.set(1);
+        //ledStrip.set(1);
 
     }
 
@@ -103,6 +106,9 @@ public class Robot extends IterativeRobot implements PIDOutput {
         myRobot.setSafetyEnabled(false);
         lEncoder.reset();
         rEncoder.reset();
+
+        zeroClaw();
+
         winch.setSpeed(0);
 
     }
@@ -116,7 +122,11 @@ public class Robot extends IterativeRobot implements PIDOutput {
         readDistance();
 
 
-        ledStrip.set(controller.getRawAxis(4));
+        if(!limitSwitch.get())
+            winchEncoder.reset();
+
+
+        //ledStrip.set(controller.getRawAxis(4));
         //ledColor 1 is off
         //Cool led options: 0.27 heartbeat
 
@@ -203,22 +213,22 @@ public class Robot extends IterativeRobot implements PIDOutput {
         solenoid1.set(soleOnePowered);
         solenoid2.set(soleTwoPowered);
 
-        // Back launch mechanism
-        /* soleThreePowered = controller.getRawButton(3);
-        soleFourPowered = controller.getRawButton(4);
-        solenoid3.set(soleThreePowered);
-        solenoid4.set(soleFourPowered); */
+        //shover
+        solenoid3.set(controller.getRawButton(13));
+        solenoid4.set(!controller.getRawButton(13));
 
     }
 
     private void raiseToHeight(int pulses) {
 
-        if (winchEncoder.get() < pulses - 5)
-            winch.setSpeed(0.4);
-        else if(winchEncoder.get() > pulses + 5)
-            winch.setSpeed(-0.4);
-        else
+        System.out.println("Raising to " + pulses);
+
+        if(pulses > winchEncoder.get())
+            winch.setSpeed(0.75);
+        else {
             winch.setSpeed(0);
+        }
+
     }
 
     private void driveDistance(float distanceInches) {
@@ -231,9 +241,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
         double speed = 0;
         double adjustedSpeed = 0;
         double currentDistance = 0;
-        double time = System.currentTimeMillis();
 
-        while(currentDistance != distanceInches) {
+        while(currentDistance < distanceInches) {
 
             if(lEncoder.getDistance() <= rEncoder.getDistance()) {
                 speed = (distanceInches - currentDistance) / distanceInches;
@@ -287,9 +296,14 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private void winchController() {
 
         // Control scheme
-        if(controller.getRawButton(6)) {
+        if(controller.getRawButton(6) ) {
 
-            winch.setSpeed(controller.getRawAxis(5));
+            double winchSpeed = controller.getRawAxis(5);
+            //Switch is open: limitSwitch.get() == true
+            if(!limitSwitch.get() && winchSpeed < 0)
+                winchSpeed = 0;
+
+            winch.setSpeed(winchSpeed);
 
         } else if (controller.getRawButton(5)) {
 
@@ -297,13 +311,15 @@ public class Robot extends IterativeRobot implements PIDOutput {
                 raiseToHeight(switchEncoderTicks);
             else if (controller.getRawButton(10))
                 raiseToHeight(scaleEncoderTicks);
-            else if (controller.getRawButton(8))
-                raiseToHeight(0);
+            else
+                lowerClaw();
 
-        } else if(controller.getRawButton(7))
-
+        } else if(controller.getRawButton(7)) {
             winchEncoder.reset();
 
+        }else{
+            winch.setSpeed(0);
+        }
 
     }
 
@@ -348,14 +364,32 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     }
     private int readDistance(){
-        arduino.read(8,1,distance);
-        return distance[0];
+        arduino.read(8,1,distance);//gets I2C byte from arduino and stores it in array distance
+        return distance[0];//in cm
     }
+
     private void approachWall(){
         int currentDistance = readDistance();
-        if(currentDistance<=minDistanceFromWall) {
+        while(currentDistance<=minDistanceFromWall) {
             currentDistance = readDistance();
             myRobot.arcadeDrive(currentDistance * adjustmentConstant, 0);
         }
+    }
+
+    private void zeroClaw() {
+        while (limitSwitch.get()) {
+            winch.setSpeed(-0.6f);
+        }
+    }
+
+    private void lowerClaw() {
+        if(limitSwitch.get()) {
+            winch.setSpeed(-0.6f);
+        }
+        else {
+            winch.setSpeed(0);
+            winchEncoder.reset();
+        }
+
     }
 }
