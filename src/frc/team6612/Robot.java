@@ -35,8 +35,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private DigitalInput limitSwitch;
     private double kP = 0.045, kI = 0.0, kD = 0.085, kF = 0;
     private final double winchTolerance = 75;
-    private int switchEncoderTicks= 2700; //~1'11"
-    private int scaleEncoderTicks=10400;// ~6'11"
+    private int switchEncoderTicks= 4000;
+    private int scaleEncoderTicks=10000;
     private double adjustmentConstant = 0.02;//multiplier for distance to determine speed
     private int minDistanceFromWall = 8;//NEEDS TO BE MEASURED in cm
 
@@ -221,10 +221,10 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void raiseToHeight(int pulses) {
 
-        System.out.println("Raising to " + pulses);
+        System.out.println("Raising to " + pulses +"\nCurrent Height: " + winchEncoder.get());
 
         if(pulses > winchEncoder.get())
-            winch.setSpeed(0.75);
+            winch.setSpeed(0.6);
         else {
             winch.setSpeed(0);
         }
