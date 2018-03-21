@@ -26,18 +26,20 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private Joystick controller;
     private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered, soleThreePowered, soleFourPowered,autonomousEnabled;
     private Thread reader;
-    private final double MIN_ROTATIONSPEED = 0.4, MIN_DRIVESPEED = 0.48;
+    private final double MIN_ROTATIONSPEED = 0.4, MIN_DRIVESPEED = 0.51;
     private double driveSpeed, rotation;
     private double lastTime, deltaTime, totalTime;
     private Spark winch, ledStrip;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2, solenoid3, solenoid4; //pneumatic control for cube launch
     private DigitalInput limitSwitch;
+    //Old Constants: 0.045, 0.0, 0.085, 0
     private double kP = 0.045, kI = 0.0, kD = 0.085, kF = 0;
     private final double winchTolerance = 75;
     private int switchEncoderTicks= 4000;
-    private int scaleEncoderTicks=10000;
+    private int scaleEncoderTicks=10300;
     private double adjustmentConstant = 0.02;//multiplier for distance to determine speed
+    private double speed;
     private int minDistanceFromWall = 8;//NEEDS TO BE MEASURED in cm
 
     //Competition Robot PID Constants:  0.045, 0, 0.085, 0
@@ -83,13 +85,21 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void autonomousInit() {
 
+        sensor.reset();
+        pid.reset();
+        autonomousEnabled = true;
+        winch.setSafetyEnabled(false);
+        myRobot.setSafetyEnabled(false);
+        lEncoder.reset();
+        rEncoder.reset();
 
-
-        driveDistance(48);
         //System.out.println(lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE - currentDistance);
         //System.out.println(rEncoder.getDistance() * INCHES_PER_ENCODER_PULSE - currentDistance);
-        moveToPosition();
-        ledStrip.set(1);
+
+        turnAngle(90, 2);
+        driveDistance(-12);
+        solenoid4.set(true);
+
 
     }
 
@@ -102,6 +112,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void teleopInit() {
 
+        pid.reset();
         winch.setSafetyEnabled(false);
         myRobot.setSafetyEnabled(false);
         lEncoder.reset();
@@ -115,6 +126,9 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     @Override
     public void teleopPeriodic() {
+
+        if(autonomousEnabled)
+            autonomousEnabled = false;
 
         winchController();
         driveControl();
@@ -221,10 +235,15 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void raiseToHeight(int pulses) {
 
-        System.out.println("Raising to " + pulses +"\nCurrent Height: " + winchEncoder.get());
+        if(pulses > winchEncoder.get()) {
 
-        if(pulses > winchEncoder.get())
-            winch.setSpeed(0.6);
+            speed = (pulses-winchEncoder.getDistance())/pulses + 0.6;
+            if(speed > 1)
+                speed = 1;
+            winch.setSpeed(speed);
+
+        }
+
         else {
             winch.setSpeed(0);
         }
@@ -233,8 +252,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private void driveDistance(float distanceInches) {
 
-        //MOMENTUM NEEDS BE ACCOUNTED FOR IN ORDER TO DRIVE ACCURATELY
-
         lEncoder.reset();
         rEncoder.reset();
 
@@ -242,33 +259,62 @@ public class Robot extends IterativeRobot implements PIDOutput {
         double adjustedSpeed = 0;
         double currentDistance = 0;
 
-        while(currentDistance < distanceInches) {
+        if (distanceInches > 0) {
+            while ((currentDistance < distanceInches) && autonomousEnabled) {
 
-            if(lEncoder.getDistance() <= rEncoder.getDistance()) {
-                speed = (distanceInches - currentDistance) / distanceInches;
-                currentDistance = rEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
+
+
+                if (lEncoder.getDistance() <= rEncoder.getDistance()) {
+                    speed = (distanceInches - currentDistance) / distanceInches;
+                    currentDistance = rEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
+
+                } else {
+                    speed = (distanceInches - currentDistance) / distanceInches;
+                    currentDistance = lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
+
+                }
+
+                if (speed > 0.7)
+                    speed = 0.7;
+
+                if (speed > 0)
+                    adjustedSpeed = speed + MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
+                else
+                    adjustedSpeed = speed - MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
+
+                myRobot.arcadeDrive(adjustedSpeed, 0);
+            }
+        } else {
+            while (currentDistance > distanceInches && autonomousEnabled) {
+
+                if (lEncoder.getDistance() <= rEncoder.getDistance()) {
+                    speed = -1*((distanceInches - currentDistance) / distanceInches);
+                    currentDistance = -1*rEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
+
+                } else {
+                    speed = -1*((distanceInches - currentDistance) / distanceInches);
+                    currentDistance = -1*lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
+
+                }
+
+                if (speed < -0.7)
+                    speed = -0.7;
+
+                if (speed > 0)
+                    adjustedSpeed = speed + MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
+                else
+                    adjustedSpeed = speed - MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
+
+                System.out.println("Speed: " + speed);
+                myRobot.arcadeDrive(adjustedSpeed, 0);
 
             }
-            else {
-                speed = (distanceInches - currentDistance) / distanceInches;
-                currentDistance = lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
 
-            }
-
-            if(speed > 0.7)
-                speed = 0.7;
-
-            if(speed > 0)
-                adjustedSpeed = speed + MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
-            else
-                adjustedSpeed = speed - MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
-
-            myRobot.arcadeDrive(adjustedSpeed, 0);
 
         }
 
-        myRobot.arcadeDrive(0,0);
 
+        myRobot.arcadeDrive(0, 0);
     }
 
     private void driveControl() {
@@ -325,6 +371,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     public void pidWrite(double rotation) {
 
+        System.out.println("Getting Values");
 
         if(rotation > 0)
             this.rotation = rotation + MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
@@ -358,8 +405,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         }
 
-        System.out.println(rotation + " " + sensor.getAngle());
-
+        myRobot.arcadeDrive(0, 0);
         pid.disable();
 
     }
