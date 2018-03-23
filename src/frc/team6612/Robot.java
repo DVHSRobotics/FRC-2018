@@ -192,16 +192,16 @@ public class Robot extends IterativeRobot implements PIDOutput {
         switch (location) {
             case 1:
                 if (plateColors.charAt(0) == 'L') {
-                    System.out.println("drive to left side of switch past auto line, place power cube on");
+                    driveDistance(-146);
+                    turnAngle(90, 2);
                 } else {
-                    System.out.println("drive to right side of switch past auto line, place power cube on");
+                    driveDistance(-146);
                 }
-
                 break;
 
             case 2:
                 if (plateColors.charAt(0) == 'L') {
-                    System.out.println("drive to left side of switch past auto line, place power cube on");
+
                 } else {
                     System.out.println("drive to right side of switch past auto line, place power cube on");
                 }
@@ -260,9 +260,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         double currentDistance = 0;
 
         if (distanceInches > 0) {
-            while ((currentDistance < distanceInches) && autonomousEnabled) {
-
-
+            while ((currentDistance < distanceInches) && isAutonomous()) {
 
                 if (lEncoder.getDistance() <= rEncoder.getDistance()) {
                     speed = (distanceInches - currentDistance) / distanceInches;
@@ -271,8 +269,9 @@ public class Robot extends IterativeRobot implements PIDOutput {
                 } else {
                     speed = (distanceInches - currentDistance) / distanceInches;
                     currentDistance = lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
-
                 }
+
+                double speedRatio = lEncoder.getDistance() / rEncoder.getDistance();
 
                 if (speed > 0.7)
                     speed = 0.7;
@@ -282,10 +281,10 @@ public class Robot extends IterativeRobot implements PIDOutput {
                 else
                     adjustedSpeed = speed - MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
 
-                myRobot.arcadeDrive(adjustedSpeed, 0);
+                myRobot.tankDrive(speed / speedRatio, speed * speedRatio);
             }
         } else {
-            while (currentDistance > distanceInches && autonomousEnabled) {
+            while (currentDistance > distanceInches && isAutonomous()) {
 
                 if (lEncoder.getDistance() <= rEncoder.getDistance()) {
                     speed = -1*((distanceInches - currentDistance) / distanceInches);
@@ -294,8 +293,9 @@ public class Robot extends IterativeRobot implements PIDOutput {
                 } else {
                     speed = -1*((distanceInches - currentDistance) / distanceInches);
                     currentDistance = -1*lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
-
                 }
+
+                double speedRatio = Math.abs(lEncoder.getDistance() / rEncoder.getDistance());
 
                 if (speed < -0.7)
                     speed = -0.7;
@@ -304,9 +304,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
                     adjustedSpeed = speed + MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
                 else
                     adjustedSpeed = speed - MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
-
-                System.out.println("Speed: " + speed);
-                myRobot.arcadeDrive(adjustedSpeed, 0);
+                myRobot.tankDrive(speed / speedRatio, speed * speedRatio);
 
             }
 
@@ -397,7 +395,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         pid.enable();
         pid.setSetpoint(angle);
 
-        while(!(pid.onTarget() && Math.abs(rotation) < MIN_ROTATIONSPEED) && totalTime < timeout && autonomousEnabled) {
+        while(!(pid.onTarget() && Math.abs(rotation) < MIN_ROTATIONSPEED) && totalTime < timeout && isAutonomous()) {
             myRobot.arcadeDrive(0, rotation);
             deltaTime = System.currentTimeMillis()/1000 - lastTime;
             lastTime = System.currentTimeMillis()/1000;
