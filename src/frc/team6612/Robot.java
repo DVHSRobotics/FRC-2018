@@ -42,6 +42,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private double speed;
     private int minDistanceFromWall = 8;//NEEDS TO BE MEASURED in cm
 
+    private final int ROBOT_LENGTH = 33;
+
     //Competition Robot PID Constants:  0.045, 0, 0.085, 0
     //Old Robot PID Constants:          0.025, 0, 0.1, 0
     private byte[] distance;
@@ -93,13 +95,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         lEncoder.reset();
         rEncoder.reset();
 
-        //System.out.println(lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE - currentDistance);
-        //System.out.println(rEncoder.getDistance() * INCHES_PER_ENCODER_PULSE - currentDistance);
-
-        turnAngle(90, 2);
-        driveDistance(-12);
-        solenoid4.set(true);
-
+        moveToPosition();
 
     }
 
@@ -120,7 +116,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         zeroClaw();
 
-        winch.setSpeed(0);
 
     }
 
@@ -134,11 +129,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
         driveControl();
         pistonControl();
         readDistance();
-
-
-        if(!limitSwitch.get())
-            winchEncoder.reset();
-
 
         //ledStrip.set(controller.getRawAxis(4));
         //ledColor 1 is off
@@ -192,27 +182,46 @@ public class Robot extends IterativeRobot implements PIDOutput {
         switch (location) {
             case 1:
                 if (plateColors.charAt(0) == 'L') {
-                    driveDistance(-146);
+                    driveDistance(-167 + ROBOT_LENGTH / 2);
                     turnAngle(90, 2);
+                    driveDistance(-34 + ROBOT_LENGTH / 2);
+                    launchCube();
                 } else {
-                    driveDistance(-146);
+                    driveDistance(-167 + ROBOT_LENGTH / 2);
                 }
                 break;
 
             case 2:
                 if (plateColors.charAt(0) == 'L') {
 
+                    driveDistance(-60 + ROBOT_LENGTH / 2);
+                    turnAngle(-90, 2);
+                    driveDistance(-56);
+                    turnAngle(90, 2);
+                    driveDistance(-78 + ROBOT_LENGTH / 2);
+                    launchCube();
+
                 } else {
-                    System.out.println("drive to right side of switch past auto line, place power cube on");
+
+                    driveDistance(-60 + ROBOT_LENGTH / 2);
+                    turnAngle(90, 2);
+                    driveDistance(-47);
+                    turnAngle(-90, 2);
+                    driveDistance(-79 + ROBOT_LENGTH / 2);
+                    launchCube();
+
                 }
 
                 break;
 
             case 3:
                 if (plateColors.charAt(0) == 'R') {
-                    System.out.println("drive to right side of switch past auto line, place power cube on");
+                    driveDistance(-167 + ROBOT_LENGTH / 2);
+                    turnAngle(-90, 2);
+                    driveDistance(-34 + ROBOT_LENGTH / 2);
+                    launchCube();
                 } else {
-                    System.out.println("drive to left side of switch past auto line, place power cube on");
+                    driveDistance(-167 + ROBOT_LENGTH / 2);
                 }
 
                 break;
@@ -256,7 +265,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         rEncoder.reset();
 
         double speed = 0;
-        double adjustedSpeed = 0;
+        double adjustedSpeed;
         double currentDistance = 0;
 
         if (distanceInches > 0) {
@@ -281,7 +290,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
                 else
                     adjustedSpeed = speed - MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
 
-                myRobot.tankDrive(speed / speedRatio, speed * speedRatio);
+                myRobot.tankDrive(adjustedSpeed / speedRatio, adjustedSpeed * speedRatio);
             }
         } else {
             while (currentDistance > distanceInches && isAutonomous()) {
@@ -304,7 +313,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
                     adjustedSpeed = speed + MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
                 else
                     adjustedSpeed = speed - MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
-                myRobot.tankDrive(speed / speedRatio, speed * speedRatio);
+                myRobot.tankDrive(adjustedSpeed / speedRatio, adjustedSpeed * speedRatio);
 
             }
 
@@ -421,9 +430,12 @@ public class Robot extends IterativeRobot implements PIDOutput {
     }
 
     private void zeroClaw() {
+
         while (limitSwitch.get()) {
             winch.setSpeed(-0.6f);
         }
+
+        winch.setSpeed(0);
     }
 
     private void lowerClaw() {
@@ -434,6 +446,10 @@ public class Robot extends IterativeRobot implements PIDOutput {
             winch.setSpeed(0);
             winchEncoder.reset();
         }
+    }
 
+    private void launchCube() {
+        solenoid3.set(true);
+        solenoid4.set(false);
     }
 }
