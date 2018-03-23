@@ -24,7 +24,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     private DifferentialDrive myRobot; //"tank drive"
     private Joystick controller;
-    private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered, soleThreePowered, soleFourPowered,autonomousEnabled;
+    private boolean arcadeDrive, compressAir, soleOnePowered, soleTwoPowered, soleThreePowered, soleFourPowered;
     private Thread reader;
     private final double MIN_ROTATIONSPEED = 0.4, MIN_DRIVESPEED = 0.51;
     private double driveSpeed, rotation;
@@ -89,7 +89,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         sensor.reset();
         pid.reset();
-        autonomousEnabled = true;
         winch.setSafetyEnabled(false);
         myRobot.setSafetyEnabled(false);
         lEncoder.reset();
@@ -122,9 +121,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void teleopPeriodic() {
 
-        if(autonomousEnabled)
-            autonomousEnabled = false;
-
         winchController();
         driveControl();
         pistonControl();
@@ -139,7 +135,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
     @Override
     public void testInit() {
 
-        autonomousEnabled = true;
         sensor.reset();
         pid.reset();
 
@@ -156,9 +151,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
     @Override
     public void disabledInit() {
-
-        disableAuto();
-
+        
     }
 
     private void liveWindow() {
@@ -387,11 +380,6 @@ public class Robot extends IterativeRobot implements PIDOutput {
             this.rotation = rotation - MIN_ROTATIONSPEED - (rotation * MIN_ROTATIONSPEED);
             //value goes from -1 - 0 to -1 - -MIN_ROTATIONSPEED
 
-    }
-
-    private void disableAuto() {
-        if(autonomousEnabled)
-            autonomousEnabled = !autonomousEnabled;
     }
 
     private void turnAngle(double angle, double timeout) {
