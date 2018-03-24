@@ -29,7 +29,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private final double MIN_ROTATIONSPEED = 0.4, MIN_DRIVESPEED = 0.51;
     private double driveSpeed, rotation;
     private double lastTime, deltaTime, totalTime;
-    private Spark winch, ledStrip;
+    private Spark winch, lift;
     private Compressor compressor;
     private Solenoid solenoid1, solenoid2, solenoid3, solenoid4; //pneumatic control for cube launch
     private DigitalInput limitSwitch;
@@ -37,7 +37,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
     private double kP = 0.045, kI = 0.0, kD = 0.085, kF = 0;
     private final double winchTolerance = 75;
     private int switchEncoderTicks= 4000;
-    private int scaleEncoderTicks=10300;
+    private int scaleEncoderTicks=10000;
     private double adjustmentConstant = 0.02;//multiplier for distance to determine speed
     private double speed;
     private int minDistanceFromWall = 8;//NEEDS TO BE MEASURED in cm
@@ -55,7 +55,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         // Objects Initialization :-)
         distance = new byte[32];
         winch = new Spark(1);
-        ledStrip = new Spark(3);
+        lift = new Spark(4);
         sensor = new AHRS(I2C.Port.kMXP);
         pid = new PIDController(kP, kI, kD, kF, sensor, this);
         lEncoder = new Encoder(4,5);
@@ -126,6 +126,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
         pistonControl();
         readDistance();
 
+        lift();
+
         //ledStrip.set(controller.getRawAxis(4));
         //ledColor 1 is off
         //Cool led options: 0.27 heartbeat
@@ -137,15 +139,18 @@ public class Robot extends IterativeRobot implements PIDOutput {
 
         sensor.reset();
         pid.reset();
+        winch.setSafetyEnabled(false);
+        myRobot.setSafetyEnabled(false);
+        lEncoder.reset();
+        rEncoder.reset();
+
+
+        driveDistance(-48);
 
     }
 
     @Override
     public void testPeriodic() {
-
-        winch.setSpeed(controller.getRawAxis(5));
-        if(controller.getRawButton(3))
-            winchEncoder.reset();
 
     }
 
@@ -264,6 +269,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
         if (distanceInches > 0) {
             while ((currentDistance < distanceInches) && isAutonomous()) {
 
+
                 if (lEncoder.getDistance() <= rEncoder.getDistance()) {
                     speed = (distanceInches - currentDistance) / distanceInches;
                     currentDistance = rEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
@@ -273,7 +279,7 @@ public class Robot extends IterativeRobot implements PIDOutput {
                     currentDistance = lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
                 }
 
-                double speedRatio = lEncoder.getDistance() / rEncoder.getDistance();
+                double speedRatio = Math.abs((lEncoder.getDistance() + 0.001f) / (rEncoder.getDistance() + 0.001f));
 
                 if (speed > 0.7)
                     speed = 0.7;
@@ -283,10 +289,13 @@ public class Robot extends IterativeRobot implements PIDOutput {
                 else
                     adjustedSpeed = speed - MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
 
+
+                System.out.println(adjustedSpeed + " " + speedRatio);
                 myRobot.tankDrive(adjustedSpeed / speedRatio, adjustedSpeed * speedRatio);
             }
         } else {
             while (currentDistance > distanceInches && isAutonomous()) {
+
 
                 if (lEncoder.getDistance() <= rEncoder.getDistance()) {
                     speed = -1*((distanceInches - currentDistance) / distanceInches);
@@ -297,7 +306,8 @@ public class Robot extends IterativeRobot implements PIDOutput {
                     currentDistance = -1*lEncoder.getDistance() * INCHES_PER_ENCODER_PULSE;
                 }
 
-                double speedRatio = Math.abs(lEncoder.getDistance() / rEncoder.getDistance());
+                double speedRatio = Math.abs((lEncoder.getDistance() - 0.001f) / (rEncoder.getDistance() - 0.001f));
+
 
                 if (speed < -0.7)
                     speed = -0.7;
@@ -306,7 +316,9 @@ public class Robot extends IterativeRobot implements PIDOutput {
                     adjustedSpeed = speed + MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
                 else
                     adjustedSpeed = speed - MIN_DRIVESPEED - (speed * MIN_DRIVESPEED);
+
                 myRobot.tankDrive(adjustedSpeed / speedRatio, adjustedSpeed * speedRatio);
+                Timer.delay(.1);//DOUBLE CHECK THIS LOGIC
 
             }
 
@@ -437,7 +449,18 @@ public class Robot extends IterativeRobot implements PIDOutput {
     }
 
     private void launchCube() {
-        solenoid3.set(true);
-        solenoid4.set(false);
+        solenoid3.set(false);
+        solenoid4.set(true);
+
+
+    }
+
+    private void lift() {
+        if(controller.getRawButton(4))
+            lift.setSpeed((controller.getRawAxis(4) + 1)/2);
+        else if(controller.getRawButton(3))
+            lift.setSpeed(-1*(controller.getRawAxis(4) + 1)/2);
+        else
+            lift.setSpeed(0);
     }
 }
